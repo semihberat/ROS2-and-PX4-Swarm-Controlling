@@ -4,7 +4,7 @@ Multi-vehicle offboard control system for PX4 autopilot using ROS2. Supports aut
 
 [Screencast from 10-14-2025 12:22:35 AM.webm](https://github.com/user-attachments/assets/9dc1ebe9-0c24-433f-acb5-07e90d40ea7a)
 
-<img width="3232" height="1124" alt="rosgraph" src="https://github.com/user-attachments/assets/fc17132e-0c9e-4f35-8df6-8d8e964a3701" />
+<img width="3232" height="1124" alt="rosgraph" src="https://github.com/user-attachments/assets/6c9d77f4-6c16-4769-86ce-cad69e1f59fe" />
 
 ## ✨ Features
 - **Multi-Vehicle Support**: Control up to 5 drones simultaneously
