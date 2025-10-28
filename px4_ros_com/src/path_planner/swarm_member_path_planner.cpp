@@ -2,12 +2,16 @@
 #include <rclcpp/rclcpp.hpp>
 #include <stdint.h>
 
+#include <px4_msgs/msg/vehicle_global_position.hpp>
+
 // Custom Interface for Neighbors Info
 #include <custom_interfaces/msg/neighbors_info.hpp>
 
 #include "../formulations/calculate_center_of_gravity.hpp"
+#include "../formulations/calculate_offset_from_center.hpp"
 
 using std::placeholders::_1;
+using px4_msgs::msg::VehicleGlobalPosition;
 
 class SwarmMemberPathPlanner : public rclcpp::Node
 {
@@ -31,9 +35,10 @@ public:
     
 private:
     rclcpp::Subscription<custom_interfaces::msg::NeighborsInfo>::SharedPtr neighbors_info_subscription_;
-    std::shared_ptr<CalculateCenterofGravity> center_of_gravity_calculator_;
 
     void path_planner_callback(const custom_interfaces::msg::NeighborsInfo::SharedPtr msg){
+        auto center_of_gravity = CalculateCenterofGravity().calculate_cog(msg->neighbor_positions);
+        auto offsets = CalculateOffsetsFromCenter().calculate_offsets(center_of_gravity, 5.0f, 5.0f, msg->neighbor_positions.size());
         
     }
 };

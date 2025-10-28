@@ -50,17 +50,19 @@ px4_ros_com/
 
 ### 🧮 **Formulations Module**
 The `formulations/` directory contains mathematical algorithms and geometric calculations essential for swarm operations:
-- **CalculateCentralPoint.hpp**: Compute center of gravity and geometric centroids for formation control
-- **Mathematical utilities**: Eigen-based algorithms for spatial calculations and coordinate transformations
+- **CalculateCenterofGravity.hpp**: Compute center of gravity for GPS positions using template-based algorithms
+- **CalculateOffsetsFromCenter.hpp**: Generate formation offsets from center point with GPS coordinate conversion
+- **Mathematical utilities**: Precise GPS-to-meter conversions for formation control
+- **Performance optimized**: Vector pre-allocation and efficient coordinate transformations
 - **Future expansion**: Will include collision avoidance mathematics, formation patterns, and optimization algorithms
 
 ### 🛤️ **Path Planner Module** 
 The `path_planner/` directory hosts intelligent navigation and coordination algorithms:
-- **Swarm path planning**: Multi-drone trajectory generation and conflict resolution  
-- **Formation control**: Maintain desired geometric patterns during flight
-- **Collision avoidance**: Real-time path adjustment based on neighbor GPS data
-- **Waypoint management**: Dynamic route planning and mission coordination
-- **Integration ready**: Designed to work with existing neighbor communication system
+- **Swarm path planning**: Multi-drone trajectory generation and conflict resolution integrated with neighbor communication
+- **Formation control**: Maintain desired geometric patterns using center of gravity calculations
+- **Real-time coordination**: Integration with NeighborsInfo subscription for dynamic formation updates
+- **Offset assignment**: Intelligent drone-to-position assignment for optimal formation flying
+- **Integration ready**: Fully connected to controller via path_planner_callback() for seamless operation
 
 Note: the package `main_class` executable is built from `src/controller/uav_controller.cpp` (see `CMakeLists.txt`).
 
@@ -285,7 +287,54 @@ public:
     
     VehicleLocalPosition vehicle_local_position_;  // Current position
     rclcpp::Publisher<custom_interfaces::msg::NeighborsInfo>::SharedPtr neighbors_gps_publisher_;
+    
+private:
+    // NEW: Path planning integration
+    rclcpp::Subscription<custom_interfaces::msg::NeighborsInfo>::SharedPtr neighbors_info_subscription_;
+    void path_planner_callback(const custom_interfaces::msg::NeighborsInfo::SharedPtr msg);
 };
+```
+
+### CalculateCenterofGravity Class
+```cpp
+class CalculateCenterofGravity {
+public:
+    template <typename T> 
+    VehicleVerticalPositions calculate_cog(const std::vector<T>& positions);
+    // Returns center of gravity for GPS coordinate list
+    // Supports any type T with .lat and .lon members
+};
+```
+
+### CalculateOffsetsFromCenter Class
+```cpp
+class CalculateOffsetsFromCenter {
+public:
+    std::vector<VehicleVerticalPositions> calculate_offsets(
+        const VehicleVerticalPositions& center, 
+        float offset_north, 
+        float offset_east, 
+        size_t num_positions
+    );
+    // Generates formation positions based on center point
+    // Returns GPS coordinates for distributed drone positioning
+};
+```
+
+### Path Planner Integration Flow
+```cpp
+// 1. Receive neighbor GPS data
+void path_planner_callback(const NeighborsInfo::SharedPtr msg) {
+    // 2. Calculate swarm center of gravity
+    auto center_of_gravity = CalculateCenterofGravity().calculate_cog(msg->neighbor_positions);
+    
+    // 3. Generate formation offsets
+    auto offsets = CalculateOffsetsFromCenter().calculate_offsets(
+        center_of_gravity, 5.0f, 5.0f, msg->neighbor_positions.size()
+    );
+    
+    // 4. Assign drones to optimal positions (TODO: implement assignment algorithm)
+}
 ```
 
 ## 💡 Support

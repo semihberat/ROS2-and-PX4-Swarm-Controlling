@@ -58,8 +58,6 @@ public:
 private:
 	rclcpp::Subscription<VehicleGlobalPosition>::SharedPtr vehicle_gps_subscriptions_;
 	rclcpp::Subscription<VehicleLocalPosition>::SharedPtr local_position_subscription_;
-
-
 	std::vector<VehicleGlobalPosition> neighbor_gps_queue_;
 	std::vector<uint8_t> neighbor_id_queue_;
 	std::vector<rclcpp::Subscription<VehicleGlobalPosition>::SharedPtr> neighbor_subscriptions_;
@@ -139,9 +137,8 @@ void UAVController::neighbor_gps_callback(const VehicleGlobalPosition::SharedPtr
 	{
 		if(neighbor_gps_queue_.size() >= static_cast<size_t>(number_of_drones - 1)){
 			neighbor_gps_queue_.erase(neighbor_gps_queue_.begin());
-
 		}
-		neighbor_gps_queue_.push_back(*msg);
+		neighbor_gps_queue_.push_back(*msg); 
 	}
 
 void UAVController::publish_gps_to_neighbors(){
