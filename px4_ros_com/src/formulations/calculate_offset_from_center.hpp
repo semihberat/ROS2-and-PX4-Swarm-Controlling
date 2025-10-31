@@ -7,6 +7,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <cmath>
+
 #define PI 3.14159
 #define EARTH_RADIUS 6371000 // in meters
 

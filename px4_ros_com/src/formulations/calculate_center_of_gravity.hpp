@@ -1,4 +1,6 @@
 #pragma once
+#ifndef CALCULATE_CENTER_OF_GRAVITY_HPP
+#define CALCULATE_CENTER_OF_GRAVITY_HPP
 
 #include <vector>
 #include <iostream>
@@ -31,3 +33,5 @@ public:
         return cog;
     }
 };
+
+#endif // CALCULATE_CENTER_OF_GRAVITY_HPP

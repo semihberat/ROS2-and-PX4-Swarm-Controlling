@@ -9,6 +9,7 @@
 
 #include "../formulations/calculate_center_of_gravity.hpp"
 #include "../formulations/calculate_offset_from_center.hpp"
+#include "../formulations/match_drone_with_offset.hpp"
 
 using std::placeholders::_1;
 using px4_msgs::msg::VehicleGlobalPosition;
@@ -32,14 +33,20 @@ public:
             std::bind(&SwarmMemberPathPlanner::path_planner_callback, this, _1)
         );
     }   
+
+    std::vector<VehicleGlobalPosition> all_positions;
+    double target_lat, target_lon;
     
 private:
     rclcpp::Subscription<custom_interfaces::msg::NeighborsInfo>::SharedPtr neighbors_info_subscription_;
 
     void path_planner_callback(const custom_interfaces::msg::NeighborsInfo::SharedPtr msg){
-        auto center_of_gravity = CalculateCenterofGravity().calculate_cog(msg->neighbor_positions);
-        auto offsets = CalculateOffsetsFromCenter().calculate_offsets(center_of_gravity, 5.0f, 5.0f, msg->neighbor_positions.size());
-        
+        all_positions = msg->neighbor_positions;
+        all_positions.push_back(msg->main_position);
+        auto center_of_gravity = CalculateCenterofGravity().calculate_cog(all_positions);
+        auto offsets = CalculateOffsetsFromCenter().calculate_offsets(center_of_gravity, 5.0f, 5.0f, all_positions.size());
+        auto matched_position = MatchDroneWithOffset().match(msg->main_position, offsets); 
+        target_lat = matched_position.lat, target_lon = matched_position.lon;
     }
 };
 

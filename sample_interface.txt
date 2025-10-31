@@ -1,1 +1,0 @@
-SensorGps[] member_gps

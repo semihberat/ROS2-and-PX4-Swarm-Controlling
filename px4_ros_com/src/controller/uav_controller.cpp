@@ -65,7 +65,7 @@ private:
 	float min_altitude = -4.0f;
 
 	// === Main Timer Callback ===
-
+	
 	void publisher_callback()
 	{
 		if (offboard_setpoint_counter_ == 10)

@@ -32,7 +32,7 @@ using namespace std::placeholders;
 class OffboardController : public rclcpp::Node
 {
 public:
-	OffboardController() : Node("offboard_control")
+	OffboardController() : Node("uav_controller")
 	{
 		this->declare_parameter("sys_id", 1);
 		this->declare_parameter("number_of_drones", 1);
