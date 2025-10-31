@@ -47,3 +47,4 @@ class CalculateOffsetsFromCenter{
 };
 
 #endif // CALCULATE_OFFSET_FROM_CENTER_HPP
+//31 10 2025
