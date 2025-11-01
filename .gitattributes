@@ -1,3 +1,9 @@
+*echo[[:space:]].vscode/[[:space:]]>>[[:space:]].gitignore
+git[[:space:]]add[[:space:]].gitignore
+git[[:space:]]commit[[:space:]]-m[[:space:]]Ignore filter=lfs diff=lfs merge=lfs -text
+VSCode filter=lfs diff=lfs merge=lfs -text
+cache
+ filter=lfs diff=lfs merge=lfs -text
 *.zip filter=lfs diff=lfs merge=lfs -text
 *.bin filter=lfs diff=lfs merge=lfs -text
 *.md filter=lfs diff=lfs merge=lfs -text
