@@ -1,3 +1,19 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:2997cee78f53470a3dbd41636417832174303bdc3d8f722bd53bb07622416ce2
-size 412
+#pragma once
+
+#ifndef VEHICLE_POSITIONS_HPP
+#define VEHICLE_POSITIONS_HPP
+
+class VehicleVerticalPositions {
+public:
+    double lat = 0.0;
+    double lon = 0.0;
+    
+    // Default constructor
+    VehicleVerticalPositions() = default;
+    
+    // Constructor with values
+    VehicleVerticalPositions(double latitude, double longitude)
+        : lat(latitude), lon(longitude) {}
+};
+
+#endif // VEHICLE_POSITIONS_HPP
