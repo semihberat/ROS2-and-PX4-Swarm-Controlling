@@ -101,10 +101,10 @@ private:
 	uint8_t sys_id;
 	uint64_t offboard_setpoint_counter_;   //!< counter for the number of setpoints sent
 	uint8_t number_of_drones;
-	double target_dlat = 0.0;
-	double target_dlon = 0.0;
+
+	double target_dlat;
+	double target_dlon;
 	float min_altitude = -4.0f;
-	 int count = 0;
 
 	// === Main Timer Callback ===
 	void publisher_callback();
@@ -141,7 +141,9 @@ void UAVController::publisher_callback()
 
 		// offboard_control_mode needs to be paired with trajectory_setpoint
 		this->publish_offboard_control_mode();
+		this->publish_gps_to_neighbors();
 		// When altitude boundary is crossed
+		RCLCPP_INFO(this->get_logger(), "Publishing Target Positions: dlat: %.6f, dlon: %.6f", target_dlat, target_dlon);
 		if (vehicle_local_position_.z > min_altitude)
 		{
 			this->publish_trajectory_setpoint(0.0, 0.0, min_altitude-1, 3.14);
@@ -158,9 +160,11 @@ void UAVController::publisher_callback()
 		}
 	}
 
+// === SUBSCRIBER CALLBACKS ===
 void UAVController::target_position_callback(const custom_interfaces::msg::TargetPositions::SharedPtr msg){
 		target_dlat = msg->target_dlat;
 		target_dlon = msg->target_dlon;
+		std::cout << "Target dlat: " << target_dlat << ", Target dlon: " << target_dlon << std::endl;
 	}	
 
 void UAVController::gps_callback(const VehicleGlobalPosition::SharedPtr msg){
@@ -194,6 +198,8 @@ void UAVController::neighbor_gps_callback(const VehicleGlobalPosition::SharedPtr
 		neighbor_gps_queue_.push_back(*msg); 
 	}
 
+
+// === PUBLISH FUNCTIONS ===
 void UAVController::publish_gps_to_neighbors(){
 		custom_interfaces::msg::NeighborsInfo msg{};
 		msg.main_id = sys_id;
@@ -239,8 +245,7 @@ void UAVController::publish_offboard_control_mode()
 void UAVController::publish_trajectory_setpoint(float x, float y, float z, float yaw_rad)
 {
 	TrajectorySetpoint msg{};
-	msg.velocity = {x, y, z};
-
+	msg.position = {x, y, z};
 	msg.yaw = yaw_rad; // [-PI:PI]
 	msg.timestamp = this->get_clock()->now().nanoseconds() / 1000;
 	trajectory_setpoint_publisher_->publish(msg);

@@ -22,8 +22,7 @@ class MatchDroneWithOffset{
         
         //I will use std::map type function 
         template<typename T>
-        VehicleVerticalPositions match(const T& vehicle_position, 
-            const std::vector<VehicleVerticalPositions>& offset_positions){
+        VehicleVerticalPositions match(const T& vehicle_position, const std::vector<VehicleVerticalPositions>& offset_positions){
                 double max_distance = 0.0;
                 VehicleVerticalPositions matched_position;
                 for (const auto& offset_position: offset_positions){
@@ -41,7 +40,6 @@ class MatchDroneWithOffset{
                 return matched_position;
         }
 };
-
 
 #endif // MATCH_DRONES_WITH_OFFSETS_HPP
 //31 10 2025

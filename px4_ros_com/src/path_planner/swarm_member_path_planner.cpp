@@ -1,6 +1,8 @@
+// Standard Libraries
 #include <iostream>
 #include <rclcpp/rclcpp.hpp>
 #include <stdint.h>
+#include <tuple>
 
 #include <px4_msgs/msg/vehicle_global_position.hpp>
 
@@ -8,14 +10,15 @@
 #include <custom_interfaces/msg/neighbors_info.hpp>
 #include <custom_interfaces/msg/target_positions.hpp>
 
+// Path Planning Formulations
 #include "../formulations/geographic/calculate_center_of_gravity.hpp"
 #include "../formulations/geographic/calculate_offset_from_center.hpp"
 #include "../formulations/geographic/match_drone_with_offset.hpp"
 #include "../formulations/geographic/calculate_distance.hpp"
-#include <tuple>
 
 using std::placeholders::_1;
 using px4_msgs::msg::VehicleGlobalPosition;
+using namespace std::chrono_literals;
 
 class SwarmMemberPathPlanner : public rclcpp::Node
 {
@@ -37,17 +40,30 @@ public:
             std::bind(&SwarmMemberPathPlanner::path_planner_callback, this, _1)
         );
         target_position_publisher_ = this->create_publisher<custom_interfaces::msg::TargetPositions>(tptc, 10);
+
+        timer_ = this->create_wall_timer(
+            100ms, std::bind(&SwarmMemberPathPlanner::timer_callback, this)
+        );
     }   
 
-    std::vector<VehicleGlobalPosition> all_positions;
-    double target_dlat, target_dlon;
-    
+
+
+
 private:
+    // Subscribers 
     rclcpp::Subscription<custom_interfaces::msg::NeighborsInfo>::SharedPtr neighbors_info_subscription_;
 
+    // Publishers
     rclcpp::Publisher<custom_interfaces::msg::TargetPositions>::SharedPtr target_position_publisher_;
 
+    // Timer
     rclcpp::TimerBase::SharedPtr timer_;
+
+    // Temporary variables
+    double dlat, dlon;
+    double target_dlat, target_dlon;
+    unsigned int verification_count = 0;
+    std::vector<px4_msgs::msg::VehicleGlobalPosition> all_positions;
     
     void path_planner_callback(const custom_interfaces::msg::NeighborsInfo::SharedPtr msg);
     void target_position_publisher();
@@ -65,19 +81,23 @@ void SwarmMemberPathPlanner::target_position_publisher(){
     };
 
 void SwarmMemberPathPlanner::path_planner_callback(const custom_interfaces::msg::NeighborsInfo::SharedPtr msg){
-        all_positions = msg->neighbor_positions;
-        all_positions.push_back(msg->main_position);
-        auto center_of_gravity = CalculateCenterofGravity().calculate_cog(all_positions);
-        auto offsets = CalculateOffsetsFromCenter().calculate_offsets(center_of_gravity, 5.0f, 5.0f, all_positions.size());
-        auto matched_position = MatchDroneWithOffset().match(msg->main_position, offsets); 
-        double dlat, dlon;
-        std::tie(dlat, dlon, std::ignore) = CalculateDistance().calculate_distance(
-            msg->main_position.lat, msg->main_position.lon,
-            matched_position.lat, matched_position.lon
-        );
+        verification_count++;
+        if (verification_count < 20){
+            all_positions = msg->neighbor_positions;
+            all_positions.push_back(msg->main_position);
+            //rclcpp info all_positions size
+            RCLCPP_INFO(this->get_logger(), "All positions size: %zu", all_positions.size());
+            auto center_of_gravity = CalculateCenterofGravity().calculate_cog(all_positions);
+            auto offsets = CalculateOffsetsFromCenter().calculate_offsets(center_of_gravity, 5.0f, 5.0f, all_positions.size());
+            auto matched_position = offsets[msg->main_id-1];
+
+            std::tie(dlat, dlon, std::ignore) = CalculateDistance().calculate_distance(
+                msg->main_position.lat, msg->main_position.lon,
+                matched_position.lat, matched_position.lon
+            );
+        }
         target_dlat = dlat;
         target_dlon = dlon;
-
     }
 
 int main(int argc, char *argv[])
