@@ -25,8 +25,6 @@ class CalculateDistance{
 
             return std::make_tuple(dlat_meter, dlon_meter, distance);
         }
-
-
 };
 
 #endif // CALCULATE_DISTANCE_HPP

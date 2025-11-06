@@ -1,3 +1,8 @@
+#pragma once
+
+#ifndef PID_HPP
+#define PID_HPP
+
 #include <iostream>
 #include <vector>
 
@@ -34,3 +39,5 @@ class PID{
 
     
 };
+
+#endif // CALCULATE_DISTANCE_HPP
