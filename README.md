@@ -2,7 +2,7 @@
 
 Multi-vehicle offboard control system for PX4 autopilot using ROS2. Supports autonomous flight, swarm operations, and real-time neighbor communication.
 
-[Screencast from 10-14-2025 12:22:35 AM.webm](https://github.com/user-attachments/assets/9dc1ebe9-0c24-433f-acb5-07e90d40ea7a)
+[Screencast from 11-07-2025 09:57:49 PM.webm](https://github.com/user-attachments/assets/a7f91df2-61fb-44e2-8fef-ec839913bbb4)
 
 <img width="1975" height="4420" alt="rosgraph" src="https://github.com/user-attachments/assets/6de27b0f-ed6e-4512-8d51-d683a61e5e85" />
 
