@@ -1,0 +1,11 @@
+/drone1:
+  ros__parameters:
+    sys_id: 1
+
+/drone2:
+  ros__parameters:
+    sys_id: 2
+
+/drone3:
+  ros__parameters:
+    sys_id: 3

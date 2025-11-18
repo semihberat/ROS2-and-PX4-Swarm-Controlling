@@ -14,12 +14,27 @@ def generate_launch_description():
     
     # Or you can load parameters for loop
     ld = load_drones(number_of_drones=number_of_drones, ld=ld, config=config)
-    ld = load_cameras(number_of_cameras=number_of_drones, ld=ld, config=config)
+    ld = load_cameras(number_of_cameras=1, ld=ld, config=config)
     ld = load_path_planners(number_of_drones=number_of_drones, ld=ld, config=config)
+    ld = load_camera_processes(number_of_cameras=1, ld=ld, config=config)
     return ld
 
 
 # MODULES TO LOAD MULTIPLE CAMERAS AND DRONES
+
+# Camera Process Nodes
+def load_camera_processes(number_of_cameras: int, ld: LaunchDescription, config = None):
+    for idx in range(1, number_of_cameras + 1):
+        camera_process_node = Node(
+            package="px4_ros_com",
+            executable="camera.py",
+            name=f'camera_process_{idx}',
+            parameters=[
+                {"sys_id": idx}
+            ]
+        )
+        ld.add_action(camera_process_node)
+    return ld
 
 # Path Planning Calculators
 def load_path_planners(number_of_drones: int, ld: LaunchDescription, config = None):
@@ -56,6 +71,7 @@ def load_cameras(number_of_cameras: int, ld: LaunchDescription, config = None):
                 f"/world/aruco/model/x500_mono_cam_down_{idx}/link/camera_link/sensor/imager/camera_info@sensor_msgs/msg/CameraInfo@gz.msgs.CameraInfo"
             ]
         )
+
         ld.add_action(camera_node)
         ld.add_action(camera_info_node)
     return ld

@@ -26,6 +26,7 @@ using namespace std::placeholders;
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace px4_msgs::msg;
+using namespace custom_interfaces::msg;
 
 class UAVController : public rclcpp::Node
 {
@@ -51,7 +52,7 @@ public:
 		std::string tpc = "/px4_" + std::to_string(sys_id) + "/target_positions";
 
 		// Subscribers
-		target_position_subscription_ = this->create_subscription<custom_interfaces::msg::TargetPositions>(tpc, qos,
+		target_position_subscription_ = this->create_subscription<TargetPositions>(tpc, qos,
 																											  std::bind(&UAVController::target_position_callback, this, _1));
 
 		vehicle_gps_subscriptions_ = this->create_subscription<VehicleGlobalPosition>(gpstpc, qos,
@@ -65,7 +66,7 @@ public:
 		offboard_control_mode_publisher_ = this->create_publisher<OffboardControlMode>(ocmptpc, 10);
 		trajectory_setpoint_publisher_ = this->create_publisher<TrajectorySetpoint>(tsptpc, 10);
 		vehicle_command_publisher_ = this->create_publisher<VehicleCommand>(vctpc, 10);
-		neighbors_gps_publisher_ = this->create_publisher<custom_interfaces::msg::NeighborsInfo>(ntpc, 10);
+		neighbors_gps_publisher_ = this->create_publisher<NeighborsInfo>(ntpc, 10);
 		
 		offboard_setpoint_counter_ = 0;
 
@@ -82,11 +83,11 @@ private:
 	// Subscribers
 	rclcpp::Subscription<VehicleGlobalPosition>::SharedPtr vehicle_gps_subscriptions_;
 	rclcpp::Subscription<VehicleLocalPosition>::SharedPtr local_position_subscription_;
-	rclcpp::Subscription<custom_interfaces::msg::TargetPositions>::SharedPtr target_position_subscription_;
+	rclcpp::Subscription<TargetPositions>::SharedPtr target_position_subscription_;
 	std::vector<rclcpp::Subscription<VehicleGlobalPosition>::SharedPtr> neighbor_subscriptions_;
 
 	// Publishers
-	rclcpp::Publisher<custom_interfaces::msg::NeighborsInfo>::SharedPtr neighbors_gps_publisher_;
+	rclcpp::Publisher<NeighborsInfo>::SharedPtr neighbors_gps_publisher_;
 	rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;
 	rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
 	rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_publisher_;
@@ -112,7 +113,7 @@ private:
 	// === SUBSCRIBER CALLBACKS ===
 	void gps_callback(const VehicleGlobalPosition::SharedPtr msg);
 	void local_position_callback(const VehicleLocalPosition::SharedPtr msg);
-	void target_position_callback(const custom_interfaces::msg::TargetPositions::SharedPtr msg);
+	void target_position_callback(const TargetPositions::SharedPtr msg);
 
 	// Listen Neighbors 
 	void listen_neighbors(rclcpp::QoS qos);
@@ -124,7 +125,7 @@ private:
 	void publish_offboard_control_mode();
 	void publish_trajectory_setpoint(float x, float y, float z, float yaw_rad);
 	void publish_vehicle_command(uint16_t command, float param1 = 0.0, float param2 = 0.0);
-	void publish_gps_to_neighbors(custom_interfaces::msg::NeighborsInfo msg);
+	void publish_gps_to_neighbors(NeighborsInfo msg);
 };
 
 void UAVController::publisher_callback()
@@ -143,7 +144,6 @@ void UAVController::publisher_callback()
 		this->publish_offboard_control_mode();
 		this->publish_gps_to_neighbors();
 		// When altitude boundary is crossed
-		RCLCPP_INFO(this->get_logger(), "Publishing Target Positions: dlat: %.6f, dlon: %.6f", target_dlat, target_dlon);
 		if (vehicle_local_position_.z > min_altitude)
 		{
 			this->publish_trajectory_setpoint(0.0, 0.0, min_altitude-1, 3.14);
@@ -161,7 +161,7 @@ void UAVController::publisher_callback()
 	}
 
 // === SUBSCRIBER CALLBACKS ===
-void UAVController::target_position_callback(const custom_interfaces::msg::TargetPositions::SharedPtr msg){
+void UAVController::target_position_callback(const TargetPositions::SharedPtr msg){
 		target_dlat = msg->target_dlat;
 		target_dlon = msg->target_dlon;
 		std::cout << "Target dlat: " << target_dlat << ", Target dlon: " << target_dlon << std::endl;
@@ -201,7 +201,7 @@ void UAVController::neighbor_gps_callback(const VehicleGlobalPosition::SharedPtr
 
 // === PUBLISH FUNCTIONS ===
 void UAVController::publish_gps_to_neighbors(){
-		custom_interfaces::msg::NeighborsInfo msg{};
+		NeighborsInfo msg{};
 		msg.main_id = sys_id;
 		msg.main_position = vehicle_gps_position_;
 		msg.neighbor_positions = neighbor_gps_queue_;
@@ -268,7 +268,7 @@ void UAVController::publish_vehicle_command(uint16_t command, float param1, floa
 
 int main(int argc, char *argv[])
 {
-	std::cout << "Starting offboard control node..." << std::endl;
+	std::cout << "============== UAV Controller ==============" << std::endl;
 	setvbuf(stdout, NULL, _IONBF, BUFSIZ);
 	rclcpp::init(argc, argv);
 	rclcpp::spin(std::make_shared<UAVController>());
