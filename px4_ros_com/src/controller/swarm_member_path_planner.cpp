@@ -14,7 +14,7 @@
 // Path Planning Formulations
 #include "../formulations/geographic/calculate_center_of_gravity.hpp"
 #include "../formulations/geographic/calculate_offset_from_center.hpp"
-#include "../formulations/geographic/match_drone_with_offset.hpp"
+
 #include "../formulations/geographic/calculate_distance.hpp"
 
 using namespace px4_msgs::msg;
@@ -87,7 +87,7 @@ void SwarmMemberPathPlanner::target_position_publisher()
     target_position_publisher_->publish(msg);
 };
 
-
+// Path Planner Callback Function
 void SwarmMemberPathPlanner::path_planner_callback(const NeighborsInfo::SharedPtr msg)
 {
     if (verification_count < verification_count_max)
@@ -95,8 +95,6 @@ void SwarmMemberPathPlanner::path_planner_callback(const NeighborsInfo::SharedPt
         verification_count++;
         all_positions = msg->neighbor_positions;
         all_positions.push_back(msg->main_position);
-
-        // rclcpp info all_positions size
        
         auto center_of_gravity = CalculateCenterofGravity().calculate_cog(all_positions);
         auto offsets = CalculateOffsetsFromCenter().calculate_offsets(center_of_gravity, offset_lat, offset_lon, all_positions.size());

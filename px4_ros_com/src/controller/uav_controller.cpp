@@ -14,7 +14,7 @@
 
 #include <px4_msgs/msg/goto_setpoint.hpp>
 
-//CUSTOM INTERFACES
+// CUSTOM INTERFACES
 #include <custom_interfaces/msg/neighbors_info.hpp>
 #include <custom_interfaces/msg/target_positions.hpp>
 
@@ -42,18 +42,18 @@ public:
 		rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
 		auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
 
-		//Topic Names
+		// Topic Names
 		std::string ocmptpc = "/px4_" + std::to_string(sys_id) + "/fmu/in/offboard_control_mode";
 		std::string tsptpc = "/px4_" + std::to_string(sys_id) + "/fmu/in/trajectory_setpoint";
 		std::string vctpc = "/px4_" + std::to_string(sys_id) + "/fmu/in/vehicle_command";
 		std::string gpstpc = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_global_position";
 		std::string lpstpc = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_local_position_v1";
-		std::string ntpc = "/px4_" + std::to_string(sys_id) + "/neighbors_info"; 
+		std::string ntpc = "/px4_" + std::to_string(sys_id) + "/neighbors_info";
 		std::string tpc = "/px4_" + std::to_string(sys_id) + "/target_positions";
 
 		// Subscribers
 		target_position_subscription_ = this->create_subscription<TargetPositions>(tpc, qos,
-																											  std::bind(&UAVController::target_position_callback, this, _1));
+																				   std::bind(&UAVController::target_position_callback, this, _1));
 
 		vehicle_gps_subscriptions_ = this->create_subscription<VehicleGlobalPosition>(gpstpc, qos,
 																					  std::bind(&UAVController::gps_callback, this, _1));
@@ -61,13 +61,13 @@ public:
 																					   std::bind(&UAVController::local_position_callback, this, _1));
 		// Listen to neighbor GPS topics
 		listen_neighbors(qos); // It's important because we are going to use this function swarm communicating development
-		
+
 		// Publishers
 		offboard_control_mode_publisher_ = this->create_publisher<OffboardControlMode>(ocmptpc, 10);
 		trajectory_setpoint_publisher_ = this->create_publisher<TrajectorySetpoint>(tsptpc, 10);
 		vehicle_command_publisher_ = this->create_publisher<VehicleCommand>(vctpc, 10);
 		neighbors_gps_publisher_ = this->create_publisher<NeighborsInfo>(ntpc, 10);
-		
+
 		offboard_setpoint_counter_ = 0;
 
 		// Timer for publisher callback
@@ -98,14 +98,13 @@ private:
 
 	// Parameters
 	rclcpp::TimerBase::SharedPtr timer_;
-	std::atomic<uint64_t> timestamp_;   //!< common synced timestamped
+	std::atomic<uint64_t> timestamp_; //!< common synced timestamped
 	uint8_t sys_id;
-	uint64_t offboard_setpoint_counter_;   //!< counter for the number of setpoints sent
+	uint64_t offboard_setpoint_counter_; //!< counter for the number of setpoints sent
 	uint8_t number_of_drones;
 
 	double target_dlat;
 	double target_dlon;
-	float min_altitude = -4.0f;
 
 	// === Main Timer Callback ===
 	void publisher_callback();
@@ -115,7 +114,7 @@ private:
 	void local_position_callback(const VehicleLocalPosition::SharedPtr msg);
 	void target_position_callback(const TargetPositions::SharedPtr msg);
 
-	// Listen Neighbors 
+	// Listen Neighbors
 	void listen_neighbors(rclcpp::QoS qos);
 	void neighbor_gps_callback(const VehicleGlobalPosition::SharedPtr msg);
 
@@ -126,89 +125,101 @@ private:
 	void publish_trajectory_setpoint(float x, float y, float z, float yaw_rad);
 	void publish_vehicle_command(uint16_t command, float param1 = 0.0, float param2 = 0.0);
 	void publish_gps_to_neighbors(NeighborsInfo msg);
+	void assemble_mode(float min_altitude);
 };
 
 void UAVController::publisher_callback()
+{
+
+	if (offboard_setpoint_counter_ == 10)
 	{
-		
-		if (offboard_setpoint_counter_ == 10)
-		{
-			// Change to Offboard mode after 10 setpoints
-			this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
+		// Change to Offboard mode after 10 setpoints
+		this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
 
-			// Arm the vehicle
-			this->arm();
-		}
+		// Arm the vehicle
+		this->arm();
+	}
 
-		// offboard_control_mode needs to be paired with trajectory_setpoint
-		this->publish_offboard_control_mode();
-		this->publish_gps_to_neighbors();
-		// When altitude boundary is crossed
+	// offboard_control_mode needs to be paired with trajectory_setpoint
+	this->publish_offboard_control_mode();
+	this->publish_gps_to_neighbors();
+	// When altitude boundary is crossed
+	
+	this->assemble_mode(-4.0f);
+	
+
+	// stop the counter after reaching 11
+	if (offboard_setpoint_counter_ < 11)
+	{
+		offboard_setpoint_counter_++;
+	}
+}
+
+void UAVController::assemble_mode(float min_altitude = -4.0f){
 		if (vehicle_local_position_.z > min_altitude)
 		{
-			this->publish_trajectory_setpoint(0.0, 0.0, min_altitude-1, 3.14);
+			this->publish_trajectory_setpoint(0.0, 0.0, min_altitude - 1, 3.14);
 		}
 		else
 		{
-			this->publish_trajectory_setpoint(target_dlat, target_dlon, min_altitude-1, 3.14);
+			this->publish_trajectory_setpoint(target_dlat, target_dlon, min_altitude - 1, 3.14);
 		}
-
-		// stop the counter after reaching 11
-		if (offboard_setpoint_counter_ < 11)
-		{
-			offboard_setpoint_counter_++;
-		}
-	}
+};
 
 // === SUBSCRIBER CALLBACKS ===
-void UAVController::target_position_callback(const TargetPositions::SharedPtr msg){
-		target_dlat = msg->target_dlat;
-		target_dlon = msg->target_dlon;
-		std::cout << "Target dlat: " << target_dlat << ", Target dlon: " << target_dlon << std::endl;
-	}	
+//Here is will be action
+void UAVController::target_position_callback(const TargetPositions::SharedPtr msg)
+{
+	target_dlat = msg->target_dlat;
+	target_dlon = msg->target_dlon;
+}
 
-void UAVController::gps_callback(const VehicleGlobalPosition::SharedPtr msg){
-		vehicle_gps_position_ = *msg;
-	}
+void UAVController::gps_callback(const VehicleGlobalPosition::SharedPtr msg)
+{
+	vehicle_gps_position_ = *msg;
+}
 
-void UAVController::local_position_callback(const VehicleLocalPosition::SharedPtr msg){
-		vehicle_local_position_ = *msg;
-	}
+void UAVController::local_position_callback(const VehicleLocalPosition::SharedPtr msg)
+{
+	vehicle_local_position_ = *msg;
+}
 
-void UAVController::listen_neighbors(rclcpp::QoS qos){
-		for (uint8_t i = 1; i <= number_of_drones; i++)
+void UAVController::listen_neighbors(rclcpp::QoS qos)
+{
+	for (uint8_t i = 1; i <= number_of_drones; i++)
+	{
+		if (i != sys_id)
 		{
-			if (i != sys_id)
-			{
-				std::string member_topic = "/px4_" + std::to_string(i) + "/fmu/out/vehicle_global_position";
-				neighbor_id_queue_.push_back(i);
-				auto sub = this->create_subscription<VehicleGlobalPosition>(member_topic, qos,
-																			std::bind(&UAVController::neighbor_gps_callback, this, _1));
+			std::string member_topic = "/px4_" + std::to_string(i) + "/fmu/out/vehicle_global_position";
+			neighbor_id_queue_.push_back(i);
+			auto sub = this->create_subscription<VehicleGlobalPosition>(member_topic, qos,
+																		std::bind(&UAVController::neighbor_gps_callback, this, _1));
 
-				neighbor_subscriptions_.push_back(sub);
-			}
+			neighbor_subscriptions_.push_back(sub);
 		}
 	}
+}
 
 void UAVController::neighbor_gps_callback(const VehicleGlobalPosition::SharedPtr msg)
+{
+	if (neighbor_gps_queue_.size() >= static_cast<size_t>(number_of_drones - 1))
 	{
-		if(neighbor_gps_queue_.size() >= static_cast<size_t>(number_of_drones - 1)){
-			neighbor_gps_queue_.erase(neighbor_gps_queue_.begin());
-		}
-		neighbor_gps_queue_.push_back(*msg); 
+		neighbor_gps_queue_.erase(neighbor_gps_queue_.begin());
 	}
-
+	neighbor_gps_queue_.push_back(*msg);
+}
 
 // === PUBLISH FUNCTIONS ===
-void UAVController::publish_gps_to_neighbors(){
-		NeighborsInfo msg{};
-		msg.main_id = sys_id;
-		msg.main_position = vehicle_gps_position_;
-		msg.neighbor_positions = neighbor_gps_queue_;
-		msg.neighbor_ids = neighbor_id_queue_;
-		
-		neighbors_gps_publisher_->publish(msg);
-	}
+void UAVController::publish_gps_to_neighbors()
+{
+	NeighborsInfo msg{};
+	msg.main_id = sys_id;
+	msg.main_position = vehicle_gps_position_;
+	msg.neighbor_positions = neighbor_gps_queue_;
+	msg.neighbor_ids = neighbor_id_queue_;
+
+	neighbors_gps_publisher_->publish(msg);
+}
 
 void UAVController::arm()
 {
@@ -224,7 +235,8 @@ void UAVController::disarm()
 	RCLCPP_INFO(this->get_logger(), "Disarm command send");
 }
 
-void UAVController::publish_goto_setpoint(float x, float y, float z){
+void UAVController::publish_goto_setpoint(float x, float y, float z)
+{
 	GotoSetpoint msg{};
 	msg.position = {x, y, z};
 	msg.timestamp = this->get_clock()->now().nanoseconds() / 1000;
