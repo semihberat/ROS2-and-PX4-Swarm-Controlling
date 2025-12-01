@@ -25,6 +25,10 @@
   <depend>sensor_msgs</depend>
   <depend>custom_interfaces</depend>
 
+  <depend>rclcpp_lifecycle</depend>
+  <depend>lifecycle_msgs</depend>
+  <depend>std_msgs</depend>
+
   <depend>launch</depend>
   <depend>launch_testing</depend>
   <depend>launch_testing_ros</depend>

@@ -12,15 +12,15 @@ public:
     CalculateCenterofGravity() = default;
     ~CalculateCenterofGravity() = default;
 
-    template <typename T> 
-    VehicleVerticalPositions calculate_cog(const std::vector<T>& positions) {
+    template <typename T1, typename T2> 
+    T1 calculate_cog(const std::vector<T2>& positions) {
         const size_t size_of_positions = positions.size();
         
         if (size_of_positions == 0) {
             throw std::invalid_argument("Position list is empty");
         }
 
-        VehicleVerticalPositions cog{};
+        T1 cog{};
         for (const auto& pos : positions) {
             cog.lat += pos.lat;
             cog.lon += pos.lon;

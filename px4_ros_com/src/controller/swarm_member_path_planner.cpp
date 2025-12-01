@@ -14,8 +14,10 @@
 // Path Planning Formulations
 #include "../formulations/geographic/calculate_center_of_gravity.hpp"
 #include "../formulations/geographic/calculate_offset_from_center.hpp"
-
 #include "../formulations/geographic/calculate_distance.hpp"
+
+//interfaces
+#include "../interfaces/vehicle_positions.hpp"
 
 using namespace px4_msgs::msg;
 using namespace custom_interfaces::msg;
@@ -96,7 +98,7 @@ void SwarmMemberPathPlanner::path_planner_callback(const NeighborsInfo::SharedPt
         all_positions = msg->neighbor_positions;
         all_positions.push_back(msg->main_position);
        
-        auto center_of_gravity = CalculateCenterofGravity().calculate_cog(all_positions);
+        auto center_of_gravity = CalculateCenterofGravity().calculate_cog<VehicleVerticalPositions, VehicleGlobalPosition>(all_positions);
         auto offsets = CalculateOffsetsFromCenter().calculate_offsets(center_of_gravity, offset_lat, offset_lon, all_positions.size());
         auto matched_position = offsets[msg->main_id - 1];
 
