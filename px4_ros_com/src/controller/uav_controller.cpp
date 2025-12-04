@@ -34,44 +34,37 @@ public:
 	UAVController() : rclcpp::Node("uav_controller")
 	{
 		this->declare_parameter("sys_id", 1);
-		this->declare_parameter("number_of_drones", 1);
 		sys_id = this->get_parameter("sys_id").as_int();
-		number_of_drones = this->get_parameter("number_of_drones").as_int();
 
 		// Listener for GPS and Local Position
 		rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
 		auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
 
 		// Topic Names
-		std::string ocmptpc = "/px4_" + std::to_string(sys_id) + "/fmu/in/offboard_control_mode";
-		std::string tsptpc = "/px4_" + std::to_string(sys_id) + "/fmu/in/trajectory_setpoint";
-		std::string vctpc = "/px4_" + std::to_string(sys_id) + "/fmu/in/vehicle_command";
-		std::string gpstpc = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_global_position";
-		std::string lpstpc = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_local_position_v1";
-		std::string ntpc = "/px4_" + std::to_string(sys_id) + "/neighbors_info";
-		std::string tpc = "/px4_" + std::to_string(sys_id) + "/target_positions";
+		std::string OFFBOARD_CONTROL_MODE = "/px4_" + std::to_string(sys_id) + "/fmu/in/offboard_control_mode";
+		std::string TRAJECTORY_SETPOINT = "/px4_" + std::to_string(sys_id) + "/fmu/in/trajectory_setpoint";
+		std::string VEHICLE_COMMAND = "/px4_" + std::to_string(sys_id) + "/fmu/in/vehicle_command";
+		std::string VEHICLE_GLOBAL_POSITION = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_global_position";
+		std::string VEHICLE_LOCAL_POSITION = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_local_position_v1";
+		std::string TARGET_POSITIONS = "/px4_" + std::to_string(sys_id) + "/target_positions";
 
 		// Subscribers
-		target_position_subscription_ = this->create_subscription<TargetPositions>(tpc, qos,
+		target_position_subscription_ = this->create_subscription<TargetPositions>(TARGET_POSITIONS, qos,
 																				   std::bind(&UAVController::target_position_callback, this, _1));
 
-		vehicle_gps_subscriptions_ = this->create_subscription<VehicleGlobalPosition>(gpstpc, qos,
+		vehicle_gps_subscriptions_ = this->create_subscription<VehicleGlobalPosition>(VEHICLE_GLOBAL_POSITION, qos,
 																					  std::bind(&UAVController::gps_callback, this, _1));
-		local_position_subscription_ = this->create_subscription<VehicleLocalPosition>(lpstpc, qos,
+		local_position_subscription_ = this->create_subscription<VehicleLocalPosition>(VEHICLE_LOCAL_POSITION, qos,
 																					   std::bind(&UAVController::local_position_callback, this, _1));
-		// Listen to neighbor GPS topics
-		listen_neighbors(qos); // It's important because we are going to use this function swarm communicating development
 
 		// Publishers
-		offboard_control_mode_publisher_ = this->create_publisher<OffboardControlMode>(ocmptpc, 10);
-		trajectory_setpoint_publisher_ = this->create_publisher<TrajectorySetpoint>(tsptpc, 10);
-		vehicle_command_publisher_ = this->create_publisher<VehicleCommand>(vctpc, 10);
-		neighbors_gps_publisher_ = this->create_publisher<NeighborsInfo>(ntpc, 10);
-
+		offboard_control_mode_publisher_ = this->create_publisher<OffboardControlMode>(OFFBOARD_CONTROL_MODE, 10);
+		trajectory_setpoint_publisher_ = this->create_publisher<TrajectorySetpoint>(TRAJECTORY_SETPOINT, 10);
+		vehicle_command_publisher_ = this->create_publisher<VehicleCommand>(VEHICLE_COMMAND, 10);
 		offboard_setpoint_counter_ = 0;
 
 		// Timer for publisher callback
-		timer_ = this->create_wall_timer(100ms, std::bind(&UAVController::publisher_callback, this));
+		timer_ = this->create_wall_timer(100ms, std::bind(&UAVController::timer_callback, this));
 	}
 	void arm();
 	void disarm();
@@ -84,10 +77,8 @@ private:
 	rclcpp::Subscription<VehicleGlobalPosition>::SharedPtr vehicle_gps_subscriptions_;
 	rclcpp::Subscription<VehicleLocalPosition>::SharedPtr local_position_subscription_;
 	rclcpp::Subscription<TargetPositions>::SharedPtr target_position_subscription_;
-	std::vector<rclcpp::Subscription<VehicleGlobalPosition>::SharedPtr> neighbor_subscriptions_;
 
 	// Publishers
-	rclcpp::Publisher<NeighborsInfo>::SharedPtr neighbors_gps_publisher_;
 	rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;
 	rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
 	rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_publisher_;
@@ -98,25 +89,19 @@ private:
 
 	// Parameters
 	rclcpp::TimerBase::SharedPtr timer_;
-	std::atomic<uint64_t> timestamp_; //!< common synced timestamped
 	uint8_t sys_id;
 	uint64_t offboard_setpoint_counter_; //!< counter for the number of setpoints sent
-	uint8_t number_of_drones;
 
 	double target_dlat;
 	double target_dlon;
 
 	// === Main Timer Callback ===
-	void publisher_callback();
+	void timer_callback();
 
 	// === SUBSCRIBER CALLBACKS ===
 	void gps_callback(const VehicleGlobalPosition::SharedPtr msg);
 	void local_position_callback(const VehicleLocalPosition::SharedPtr msg);
 	void target_position_callback(const TargetPositions::SharedPtr msg);
-
-	// Listen Neighbors
-	void listen_neighbors(rclcpp::QoS qos);
-	void neighbor_gps_callback(const VehicleGlobalPosition::SharedPtr msg);
 
 	// === PUBLISH FUNCTIONS ===
 	void publish_goto_setpoint(float x, float y, float z);
@@ -128,7 +113,7 @@ private:
 	void assemble_mode(float min_altitude);
 };
 
-void UAVController::publisher_callback()
+void UAVController::timer_callback()
 {
 
 	if (offboard_setpoint_counter_ == 10)
@@ -142,7 +127,7 @@ void UAVController::publisher_callback()
 
 	// offboard_control_mode needs to be paired with trajectory_setpoint
 	this->publish_offboard_control_mode();
-	this->publish_gps_to_neighbors();
+
 	// When altitude boundary is crossed
 	
 	this->assemble_mode(-4.0f);
@@ -184,43 +169,7 @@ void UAVController::local_position_callback(const VehicleLocalPosition::SharedPt
 	vehicle_local_position_ = *msg;
 }
 
-void UAVController::listen_neighbors(rclcpp::QoS qos)
-{
-	for (uint8_t i = 1; i <= number_of_drones; i++)
-	{
-		if (i != sys_id)
-		{
-			std::string member_topic = "/px4_" + std::to_string(i) + "/fmu/out/vehicle_global_position";
-			neighbor_id_queue_.push_back(i);
-			auto sub = this->create_subscription<VehicleGlobalPosition>(member_topic, qos,
-																		std::bind(&UAVController::neighbor_gps_callback, this, _1));
-
-			neighbor_subscriptions_.push_back(sub);
-		}
-	}
-}
-
-void UAVController::neighbor_gps_callback(const VehicleGlobalPosition::SharedPtr msg)
-{
-	if (neighbor_gps_queue_.size() >= static_cast<size_t>(number_of_drones - 1))
-	{
-		neighbor_gps_queue_.erase(neighbor_gps_queue_.begin());
-	}
-	neighbor_gps_queue_.push_back(*msg);
-}
-
 // === PUBLISH FUNCTIONS ===
-void UAVController::publish_gps_to_neighbors()
-{
-	NeighborsInfo msg{};
-	msg.main_id = sys_id;
-	msg.main_position = vehicle_gps_position_;
-	msg.neighbor_positions = neighbor_gps_queue_;
-	msg.neighbor_ids = neighbor_id_queue_;
-
-	neighbors_gps_publisher_->publish(msg);
-}
-
 void UAVController::arm()
 {
 	publish_vehicle_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0);

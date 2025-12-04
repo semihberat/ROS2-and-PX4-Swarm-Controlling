@@ -15,6 +15,7 @@ def generate_launch_description():
     # Or you can load parameters for loop
     ld = load_drones(number_of_drones=number_of_drones, ld=ld, config=config)
     ld = load_cameras(number_of_cameras=1, ld=ld, config=config)
+    ld = load_swarm_communication(number_of_drones=number_of_drones, ld=ld, config=config)
     ld = load_path_planners(number_of_drones=number_of_drones, ld=ld, config=config)
     ld = load_camera_processes(number_of_cameras=1, ld=ld, config=config)
     return ld
@@ -37,6 +38,21 @@ def load_camera_processes(number_of_cameras: int, ld: LaunchDescription, config 
     return ld
 
 # Path Planning Calculators
+
+def load_swarm_communication(number_of_drones: int, ld: LaunchDescription, config = None):
+    for idx in range(1, number_of_drones + 1):
+        swarm_communication_node = Node(
+            package="px4_ros_com",
+            executable="swarm_communication",
+            name=f'swarm_communication_{idx}',
+            parameters=[
+                {"sys_id": idx},
+                {"number_of_drones": number_of_drones}
+            ]
+        )
+        ld.add_action(swarm_communication_node)
+    return ld
+
 def load_path_planners(number_of_drones: int, ld: LaunchDescription, config = None):
     for idx in range(1, number_of_drones + 1):
         path_planner_node = Node(
@@ -85,7 +101,6 @@ def load_drones(number_of_drones: int, ld: LaunchDescription, config = None):
             name=f'drone{idx}',
             parameters=[config, 
                         {'sys_id': idx},
-                        {'number_of_drones': number_of_drones}
                         ]
         )
         ld.add_action(drone_node)
