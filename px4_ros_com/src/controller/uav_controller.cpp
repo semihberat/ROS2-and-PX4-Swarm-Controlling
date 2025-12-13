@@ -14,9 +14,9 @@
 
 #include <px4_msgs/msg/goto_setpoint.hpp>
 
-// CUSTOM INTERFACES
-#include <custom_interfaces/msg/neighbors_info.hpp>
-#include <custom_interfaces/msg/target_positions.hpp>
+		// CUSTOM INTERFACES
+		#include <custom_interfaces/msg/neighbors_info.hpp>
+		#include <custom_interfaces/msg/target_positions.hpp>
 
 // isimlendirme yaparken basina / koymak ros2'de namespace kullaniminda daha kati olmasi icin onlem aliyor
 // eger / koymazsaniz node ismi namespace'in basina ekleniyor ve bu bazen istenmeyen durumlara yol acabiliyor

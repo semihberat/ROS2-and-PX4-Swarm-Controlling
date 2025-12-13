@@ -7,11 +7,6 @@
 #include <px4_msgs/msg/vehicle_local_position.hpp>
 #include <px4_msgs/msg/vehicle_global_position.hpp>
 
-// PX4_MSGS PUBLICATIONS
-#include <px4_msgs/msg/offboard_control_mode.hpp>
-#include <px4_msgs/msg/trajectory_setpoint.hpp>
-#include <px4_msgs/msg/vehicle_command.hpp>
-
 #include <px4_msgs/msg/goto_setpoint.hpp>
 
 // CUSTOM INTERFACES
