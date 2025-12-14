@@ -4,8 +4,8 @@
 
 class VectoralDistance {
     public:
-        double dlat;
-        double dlon;
-        double distance;
+        double dlat_meter = 0.0;
+        double dlon_meter = 0.0;
+        double distance = 0.0;
 };
 #endif

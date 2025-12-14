@@ -14,9 +14,9 @@
 
 #include <px4_msgs/msg/goto_setpoint.hpp>
 
-		// CUSTOM INTERFACES
-		#include <custom_interfaces/msg/neighbors_info.hpp>
-		#include <custom_interfaces/msg/target_positions.hpp>
+// CUSTOM INTERFACES
+#include <custom_interfaces/msg/neighbors_info.hpp>
+#include <custom_interfaces/msg/target_positions.hpp>
 
 // isimlendirme yaparken basina / koymak ros2'de namespace kullaniminda daha kati olmasi icin onlem aliyor
 // eger / koymazsaniz node ismi namespace'in basina ekleniyor ve bu bazen istenmeyen durumlara yol acabiliyor
@@ -129,9 +129,8 @@ void UAVController::timer_callback()
 	this->publish_offboard_control_mode();
 
 	// When altitude boundary is crossed
-	
+
 	this->assemble_mode(-4.0f);
-	
 
 	// stop the counter after reaching 11
 	if (offboard_setpoint_counter_ < 11)
@@ -140,19 +139,20 @@ void UAVController::timer_callback()
 	}
 }
 
-void UAVController::assemble_mode(float min_altitude = -4.0f){
-		if (vehicle_local_position_.z > min_altitude)
-		{
-			this->publish_trajectory_setpoint(0.0, 0.0, min_altitude - 1, 3.14);
-		}
-		else
-		{
-			this->publish_trajectory_setpoint(target_dlat, target_dlon, min_altitude - 1, 3.14);
-		}
+void UAVController::assemble_mode(float min_altitude = -4.0f)
+{
+	if (vehicle_local_position_.z > min_altitude)
+	{
+		this->publish_trajectory_setpoint(0.0, 0.0, min_altitude - 1, 3.14);
+	}
+	else
+	{
+		this->publish_trajectory_setpoint(target_dlat, target_dlon, min_altitude - 1, 3.14);
+	}
 };
 
 // === SUBSCRIBER CALLBACKS ===
-//Here is will be action
+// Here is will be action
 void UAVController::target_position_callback(const TargetPositions::SharedPtr msg)
 {
 	target_dlat = msg->target_dlat;

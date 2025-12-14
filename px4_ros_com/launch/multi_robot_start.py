@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch_ros.actions import Node
+from launch_ros.actions import Node, LifecycleNode
 from ament_index_python.packages import get_package_share_directory
 import os 
 
@@ -55,8 +55,9 @@ def load_swarm_communication(number_of_drones: int, ld: LaunchDescription, confi
 
 def load_path_planners(number_of_drones: int, ld: LaunchDescription, config = None):
     for idx in range(1, number_of_drones + 1):
-        path_planner_node = Node(
+        path_planner_node = LifecycleNode(
             package="px4_ros_com",
+            namespace="",
             executable="swarm_member_path_planner",
             name=f'path_planner_{idx}',
             parameters=[

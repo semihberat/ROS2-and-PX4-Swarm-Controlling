@@ -11,19 +11,23 @@
 # define PI 3.14159
 # define EARTH_RADIUS 6371000 // in meters
 
+#include "../../interfaces/vectoral_distance.hpp"
+
 class CalculateDistance{
     public:
         CalculateDistance() = default;
         ~CalculateDistance() = default;
 
-        std::tuple<double, double, double> calculate_distance(double lat1, double lon1, double lat2, double lon2){
+        template<typename T>
+        T calculate_distance(double lat1, double lon1, double lat2, double lon2){
+            T result;
             double dlat = (lat2 - lat1) * (PI / 180.0);
             double dlon = (lon2 - lon1) * (PI / 180.0);
-            double dlat_meter = dlat * EARTH_RADIUS;
-            double dlon_meter = dlon * EARTH_RADIUS * cos(lat1 * (PI / 180.0));
-            double distance = sqrt(dlat_meter * dlat_meter + dlon_meter * dlon_meter);
+            result.dlat_meter = dlat * EARTH_RADIUS;
+            result.dlon_meter = dlon * EARTH_RADIUS * cos(lat1 * (PI / 180.0));
+            result.distance = sqrt(result.dlat_meter * result.dlat_meter + result.dlon_meter * result.dlon_meter);
 
-            return std::make_tuple(dlat_meter, dlon_meter, distance);
+            return result;
         }
 };
 

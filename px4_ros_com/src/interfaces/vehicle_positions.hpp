@@ -5,8 +5,8 @@
 
 class VehicleVerticalPositions {
 public:
-    double lat ;
-    double lon ;
+    double lat = 0.0;
+    double lon = 0.0;
 };
 
 #endif // VEHICLE_POSITIONS_HPP
