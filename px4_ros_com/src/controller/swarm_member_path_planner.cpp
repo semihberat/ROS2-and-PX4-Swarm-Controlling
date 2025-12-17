@@ -21,9 +21,15 @@
 #include "../interfaces/vehicle_positions.hpp"
 #include "../interfaces/vectoral_distance.hpp"
 
+#include "lifecycle_msgs/srv/get_state.hpp"
+#include "lifecycle_msgs/srv/get_available_states.hpp"
+#include "lifecycle_msgs/srv/change_state.hpp"
+
+using namespace lifecycle_msgs::srv;
+using namespace lifecycle_msgs::msg;
 using namespace px4_msgs::msg;
 using namespace custom_interfaces::msg;
-using std::placeholders::_1;
+using namespace std::placeholders;
 using namespace std::chrono_literals;
 using namespace std::chrono;
 using LifecycleCallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
@@ -41,14 +47,19 @@ public:
         this->declare_parameter("sys_id", 1);
 
         std::string ntpc = "/px4_" + std::to_string(this->get_parameter("sys_id").as_int()) + "/neighbors_info";
-        std::string service_change_state_name = "/drone" + std::to_string(this->get_parameter("sys_id").as_int()) + "/change_state";
-        
+
         neighbors_info_subscription_ = this->create_subscription<NeighborsInfo>(
             ntpc, qos,
             std::bind(&SwarmMemberPathPlanner::path_planner_callback, this, _1));
     }
 
 private:
+    // Service
+    rclcpp::Service<GetState>::SharedPtr get_state_service_;
+    rclcpp::Service<GetAvailableStates>::SharedPtr get_available_states_service_;
+    // Client
+    rclcpp::Client<ChangeState>::SharedPtr change_state_client_;
+
     // Subscribers
     rclcpp::Subscription<NeighborsInfo>::SharedPtr neighbors_info_subscription_;
 
@@ -59,12 +70,11 @@ private:
     rclcpp::TimerBase::SharedPtr timer_;
 
     // Temporary variables
-
     double target_dlat, target_dlon;
     VectoralDistance vectoral_distance;
     unsigned int verification_count = 0;
     const unsigned int verification_count_max = 50;
-
+    VehicleVerticalPositions target_position_;
     double offset_lat = 2.0f;
     double offset_lon = 2.0f;
 
@@ -75,8 +85,6 @@ private:
     void path_planner_callback(const NeighborsInfo::SharedPtr msg);
 
     void target_position_publisher();
-
-    void fit_control(const VehicleGlobalPosition::SharedPtr main_position);
 
     void timer_callback()
     {
@@ -141,6 +149,7 @@ void SwarmMemberPathPlanner::target_position_publisher()
 // Path Planner Callback Function
 void SwarmMemberPathPlanner::path_planner_callback(const NeighborsInfo::SharedPtr msg)
 {
+
     if (verification_count < verification_count_max)
     {
         verification_count++;
@@ -151,6 +160,8 @@ void SwarmMemberPathPlanner::path_planner_callback(const NeighborsInfo::SharedPt
         auto offsets = CalculateOffsetsFromCenter().calculate_offsets(center_of_gravity, offset_lat, offset_lon, all_positions.size());
         auto matched_position = offsets[msg->main_id - 1];
 
+        target_position_ = matched_position;
+
         vectoral_distance = CalculateDistance().calculate_distance<VectoralDistance>(
             msg->main_position.lat, msg->main_position.lon,
             matched_position.lat, matched_position.lon);
@@ -159,16 +170,25 @@ void SwarmMemberPathPlanner::path_planner_callback(const NeighborsInfo::SharedPt
     target_dlat = vectoral_distance.dlat_meter;
     target_dlon = vectoral_distance.dlon_meter;
 
-    for (const auto& neighbor : msg->neighbor_positions)
+    for (const auto &neighbor : msg->neighbor_positions)
     {
         auto uav_distance = CalculateDistance().calculate_distance<VectoralDistance>(
             msg->main_position.lat, msg->main_position.lon,
             neighbor.lat, neighbor.lon);
-            
+
         if (uav_distance.distance <= collision_tolerance_m)
         {
             target_dlon = -uav_distance.dlon_meter + target_dlon;
             target_dlat = -uav_distance.dlat_meter + target_dlat;
+        }
+    }
+
+    float distance = sqrt(pow(target_dlat, 2) + pow(target_dlon, 2));
+
+    if ((distance <= 0.01f) && (verification_count >= verification_count_max))
+    {
+        if(this->get_current_state().id() != lifecycle_msgs::msg::State::PRIMARY_STATE_INACTIVE){
+        this->trigger_transition(lifecycle_msgs::msg::Transition::TRANSITION_DEACTIVATE);
         }
     }
 }

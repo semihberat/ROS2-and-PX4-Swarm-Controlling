@@ -26,9 +26,10 @@ def generate_launch_description():
 # Camera Process Nodes
 def load_camera_processes(number_of_cameras: int, ld: LaunchDescription, config = None):
     for idx in range(1, number_of_cameras + 1):
-        camera_process_node = Node(
+        camera_process_node = LifecycleNode(
             package="px4_ros_com",
             executable="camera.py",
+            namespace="",
             name=f'camera_process_{idx}',
             parameters=[
                 {"sys_id": idx}
