@@ -13,9 +13,18 @@ def generate_launch_description():
     config = os.path.join(pkg_share, 'config', 'multi_robot_params.yaml')
     
     # Load formation control nodes
+    ld = load_joy_node(ld=ld)
     ld = load_formation_control(number_of_drones=number_of_drones, ld=ld, config=config)
     return ld
 
+
+def load_joy_node(ld: LaunchDescription):
+    joy_node = Node(
+        package="joy",
+        executable="joy_node",
+    )
+    ld.add_action(joy_node)
+    return ld
 # Formation Control Node
 def load_formation_control(number_of_drones: int, ld: LaunchDescription, config):
     for idx in range(1, number_of_drones + 1):
@@ -30,4 +39,5 @@ def load_formation_control(number_of_drones: int, ld: LaunchDescription, config)
             output='screen'  # ✅ Console output
         )       
         ld.add_action(formation_control_node)
+        
     return ld
