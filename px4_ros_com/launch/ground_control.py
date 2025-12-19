@@ -1,0 +1,33 @@
+from launch import LaunchDescription
+from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
+import os 
+
+def generate_launch_description():
+
+    number_of_drones = 5
+
+    ld = LaunchDescription()
+
+    pkg_share = get_package_share_directory('px4_ros_com')
+    config = os.path.join(pkg_share, 'config', 'multi_robot_params.yaml')
+    
+    # Load formation control nodes
+    ld = load_formation_control(number_of_drones=number_of_drones, ld=ld, config=config)
+    return ld
+
+# Formation Control Node
+def load_formation_control(number_of_drones: int, ld: LaunchDescription, config):
+    for idx in range(1, number_of_drones + 1):
+        formation_control_node = Node(
+            package="px4_ros_com",
+            executable="formation_control",
+            name=f'formation_control_{idx}',  # ✅ Unique name
+            parameters=[
+                {"sys_id": idx},
+            
+            ],
+            output='screen'  # ✅ Console output
+        )       
+        ld.add_action(formation_control_node)
+    return ld

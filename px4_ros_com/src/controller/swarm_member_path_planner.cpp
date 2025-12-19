@@ -83,7 +83,7 @@ private:
     std::vector<px4_msgs::msg::VehicleGlobalPosition> all_positions;
 
     void path_planner_callback(const NeighborsInfo::SharedPtr msg);
-
+    
     void target_position_publisher();
 
     void timer_callback()
