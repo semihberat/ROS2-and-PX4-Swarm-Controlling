@@ -16,7 +16,6 @@
 
 // CUSTOM INTERFACES
 #include <custom_interfaces/msg/neighbors_info.hpp>
-#include <custom_interfaces/msg/target_positions.hpp>
 
 // isimlendirme yaparken basina / koymak ros2'de namespace kullaniminda daha kati olmasi icin onlem aliyor
 // eger / koymazsaniz node ismi namespace'in basina ekleniyor ve bu bazen istenmeyen durumlara yol acabiliyor
@@ -46,11 +45,9 @@ public:
 		std::string VEHICLE_COMMAND = "/px4_" + std::to_string(sys_id) + "/fmu/in/vehicle_command";
 		std::string VEHICLE_GLOBAL_POSITION = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_global_position";
 		std::string VEHICLE_LOCAL_POSITION = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_local_position_v1";
-		std::string TARGET_POSITIONS = "/px4_" + std::to_string(sys_id) + "/target_positions";
+		
 
 		// Subscribers
-		target_position_subscription_ = this->create_subscription<TargetPositions>(TARGET_POSITIONS, qos,
-																				   std::bind(&UAVController::target_position_callback, this, _1));
 
 		vehicle_gps_subscriptions_ = this->create_subscription<VehicleGlobalPosition>(VEHICLE_GLOBAL_POSITION, qos,
 																					  std::bind(&UAVController::gps_callback, this, _1));
@@ -76,7 +73,7 @@ private:
 	// Subscribers
 	rclcpp::Subscription<VehicleGlobalPosition>::SharedPtr vehicle_gps_subscriptions_;
 	rclcpp::Subscription<VehicleLocalPosition>::SharedPtr local_position_subscription_;
-	rclcpp::Subscription<TargetPositions>::SharedPtr target_position_subscription_;
+
 
 	// Publishers
 	rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;
@@ -92,16 +89,12 @@ private:
 	uint8_t sys_id;
 	uint64_t offboard_setpoint_counter_; //!< counter for the number of setpoints sent
 
-	double target_dlat;
-	double target_dlon;
-
 	// === Main Timer Callback ===
 	void timer_callback();
 
 	// === SUBSCRIBER CALLBACKS ===
 	void gps_callback(const VehicleGlobalPosition::SharedPtr msg);
 	void local_position_callback(const VehicleLocalPosition::SharedPtr msg);
-	void target_position_callback(const TargetPositions::SharedPtr msg);
 
 	// === PUBLISH FUNCTIONS ===
 	void publish_goto_setpoint(float x, float y, float z);
@@ -118,47 +111,26 @@ void UAVController::timer_callback()
 
 	if (offboard_setpoint_counter_ == 10)
 	{
-		// Change to Offboard mode after 10 setpoints
-		this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
 
 		// Arm the vehicle
 		this->arm();
+		
 	}
-
-	// offboard_control_mode needs to be paired with trajectory_setpoint
-	this->publish_offboard_control_mode();
-
-	// When altitude boundary is crossed
-
-	this->assemble_mode(-4.0f);
 
 	// stop the counter after reaching 11
 	if (offboard_setpoint_counter_ < 11)
 	{
+		// Change to Offboard mode after 10 setpoints
+		this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
+		this->publish_trajectory_setpoint(0.0f, 0.0f, 0.0f, 0.0f);
+		this->publish_offboard_control_mode();
 		offboard_setpoint_counter_++;
+
 	}
 }
-
-void UAVController::assemble_mode(float min_altitude = -4.0f)
-{
-	if (vehicle_local_position_.z > min_altitude)
-	{
-		this->publish_trajectory_setpoint(0.0, 0.0, min_altitude - 1, 3.14);
-	}
-	else
-	{
-		this->publish_trajectory_setpoint(target_dlat, target_dlon, min_altitude - 1, 3.14);
-	}
-};
 
 // === SUBSCRIBER CALLBACKS ===
 // Here is will be action
-void UAVController::target_position_callback(const TargetPositions::SharedPtr msg)
-{
-	target_dlat = msg->target_dlat;
-	target_dlon = msg->target_dlon;
-}
-
 void UAVController::gps_callback(const VehicleGlobalPosition::SharedPtr msg)
 {
 	vehicle_gps_position_ = *msg;

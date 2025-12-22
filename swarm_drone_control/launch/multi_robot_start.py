@@ -9,7 +9,7 @@ def generate_launch_description():
 
     ld = LaunchDescription()
 
-    pkg_share = get_package_share_directory('px4_ros_com')
+    pkg_share = get_package_share_directory('swarm_drone_control')
     config = os.path.join(pkg_share, 'config', 'multi_robot_params.yaml')
     
     # Or you can load parameters for loop
@@ -17,18 +17,15 @@ def generate_launch_description():
     ld = load_cameras(number_of_cameras=1, ld=ld, config=config)
     ld = load_swarm_communication(number_of_drones=number_of_drones, ld=ld, config=config)
     ld = load_path_planners(number_of_drones=number_of_drones, ld=ld, config=config)
-    ld = load_camera_processes(number_of_cameras=1, ld=ld, config=config)
+    ld = load_camera_processes(number_of_cameras=1, ld=ld, config=None)
     return ld
-
-
-# MODULES TO LOAD MULTIPLE CAMERAS AND DRONES
 
 # Camera Process Nodes
 def load_camera_processes(number_of_cameras: int, ld: LaunchDescription, config = None):
     for idx in range(1, number_of_cameras + 1):
         camera_process_node = LifecycleNode(
-            package="px4_ros_com",
-            executable="camera.py",
+            package="swarm_drone_control",
+            executable="camera_bridge.py",
             namespace="",
             name=f'camera_process_{idx}',
             parameters=[
@@ -43,7 +40,7 @@ def load_camera_processes(number_of_cameras: int, ld: LaunchDescription, config 
 def load_swarm_communication(number_of_drones: int, ld: LaunchDescription, config = None):
     for idx in range(1, number_of_drones + 1):
         swarm_communication_node = Node(
-            package="px4_ros_com",
+            package="swarm_drone_control",
             executable="swarm_communication",
             name=f'swarm_communication_{idx}',
             parameters=[
@@ -57,7 +54,7 @@ def load_swarm_communication(number_of_drones: int, ld: LaunchDescription, confi
 def load_path_planners(number_of_drones: int, ld: LaunchDescription, config = None):
     for idx in range(1, number_of_drones + 1):
         path_planner_node = LifecycleNode(
-            package="px4_ros_com",
+            package="swarm_drone_control",
             namespace="",
             executable="swarm_member_path_planner",
             name=f'path_planner_{idx}',
@@ -98,7 +95,7 @@ def load_cameras(number_of_cameras: int, ld: LaunchDescription, config = None):
 def load_drones(number_of_drones: int, ld: LaunchDescription, config = None):
     for idx in range(1, number_of_drones + 1):
         drone_node = Node(
-            package='px4_ros_com',
+            package='swarm_drone_control',
             executable='uav_controller',
             name=f'drone{idx}',
             parameters=[config, 

@@ -399,4 +399,4 @@ Covariance9d transform_frame(const Covariance9d &cov, const Eigen::Quaterniond &
 }
 
 } // namespace frame_transforms
-} // namespace px4_ros_com
+} // namespace swarm_drone_control
