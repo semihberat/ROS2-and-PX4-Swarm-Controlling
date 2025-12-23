@@ -111,7 +111,7 @@ void UAVController::timer_callback()
 
 	if (offboard_setpoint_counter_ == 10)
 	{
-
+		this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
 		// Arm the vehicle
 		this->arm();
 		
@@ -121,8 +121,8 @@ void UAVController::timer_callback()
 	if (offboard_setpoint_counter_ < 11)
 	{
 		// Change to Offboard mode after 10 setpoints
-		this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
-		this->publish_trajectory_setpoint(0.0f, 0.0f, 0.0f, 0.0f);
+
+		this->publish_trajectory_setpoint(0.0f, 0.0f, -4.0f, 0.0f);
 		this->publish_offboard_control_mode();
 		offboard_setpoint_counter_++;
 
