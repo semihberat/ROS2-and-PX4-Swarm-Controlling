@@ -52,11 +52,18 @@ public:
     }
 
 private:
+    // Timer callback function
+    void timer_callback()
+    {
+        publish_gps_to_neighbors();
+    }
+
     // Parameters
     uint8_t sys_id;
     uint8_t number_of_drones;
-    VehicleGlobalPosition vehicle_gps_position_;
-    VehicleLocalPosition vehicle_local_position_;
+    VehicleGlobalPosition::SharedPtr vehicle_gps_position_ = std::make_shared<VehicleGlobalPosition>();
+    VehicleLocalPosition::SharedPtr vehicle_local_position_ = std::make_shared<VehicleLocalPosition>();
+
     rclcpp::TimerBase::SharedPtr timer_;
 
     // Data Queues
@@ -75,23 +82,16 @@ private:
     void local_position_callback(const VehicleLocalPosition::SharedPtr msg);
     void listen_neighbors(rclcpp::QoS qos);
     void neighbor_gps_callback(const VehicleGlobalPosition::SharedPtr msg);
-
-    void timer_callback();
 };
-
-void NeighborsListener::timer_callback()
-{
-    publish_gps_to_neighbors();
-}
 
 void NeighborsListener::gps_callback(const VehicleGlobalPosition::SharedPtr msg)
 {
-    vehicle_gps_position_ = *msg;
+    vehicle_gps_position_ = msg;
 }
 
 void NeighborsListener::local_position_callback(const VehicleLocalPosition::SharedPtr msg)
 {
-    vehicle_local_position_ = *msg;
+    vehicle_local_position_ = msg;
 }
 
 void NeighborsListener::listen_neighbors(rclcpp::QoS qos)
@@ -114,7 +114,7 @@ void NeighborsListener::publish_gps_to_neighbors()
 {
     NeighborsInfo msg{};
     msg.main_id = sys_id;
-    msg.main_position = vehicle_gps_position_;
+    msg.main_position = *vehicle_gps_position_;
     msg.neighbor_positions = neighbor_gps_queue_;
     msg.neighbor_ids = neighbor_id_queue_;
 

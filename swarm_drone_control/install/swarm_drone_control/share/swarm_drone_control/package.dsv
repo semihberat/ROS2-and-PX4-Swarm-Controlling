@@ -1,5 +1,0 @@
-source;share/swarm_drone_control/local_setup.bash
-source;share/swarm_drone_control/local_setup.dsv
-source;share/swarm_drone_control/local_setup.ps1
-source;share/swarm_drone_control/local_setup.sh
-source;share/swarm_drone_control/local_setup.zsh
