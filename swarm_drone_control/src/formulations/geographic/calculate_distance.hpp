@@ -1,6 +1,6 @@
 #pragma once
 
-#ifndef CALCULATE_DISTANCE_HPP  
+#ifndef CALCULATE_DISTANCE_HPP
 #define CALCULATE_DISTANCE_HPP
 
 #include <vector>
@@ -8,28 +8,28 @@
 #include <stdexcept>
 #include <cmath>
 
-# define PI 3.14159
-# define EARTH_RADIUS 6371000 // in meters
+class CalculateDistance
+{
+public:
+    CalculateDistance() = default;
+    ~CalculateDistance() = default;
 
-#include "../../interfaces/vectoral_distance.hpp"
+    static constexpr float PI_VAL = 3.14159f;
+    static constexpr float EARTH_RADIUS = 6371000.0f; // in meters
 
-class CalculateDistance{
-    public:
-        CalculateDistance() = default;
-        ~CalculateDistance() = default;
+    template <typename T>
+    static T calculate_distance(float lat1, float lon1, float lat2, float lon2)
+    {
+        T result;
+        float dlat = (lat2 - lat1) * (PI_VAL / 180.0f);
+        float dlon = (lon2 - lon1) * (PI_VAL / 180.0f);
+        result.dlat_meter = dlat * EARTH_RADIUS;
+        result.dlon_meter = dlon * EARTH_RADIUS * cos(lat1 * (PI_VAL / 180.0f));
+        result.distance = sqrt(result.dlat_meter * result.dlat_meter + result.dlon_meter * result.dlon_meter);
 
-        template<typename T>
-        T calculate_distance(double lat1, double lon1, double lat2, double lon2){
-            T result;
-            double dlat = (lat2 - lat1) * (PI / 180.0);
-            double dlon = (lon2 - lon1) * (PI / 180.0);
-            result.dlat_meter = dlat * EARTH_RADIUS;
-            result.dlon_meter = dlon * EARTH_RADIUS * cos(lat1 * (PI / 180.0));
-            result.distance = sqrt(result.dlat_meter * result.dlat_meter + result.dlon_meter * result.dlon_meter);
-
-            return result;
-        }
+        return result;
+    }
 };
 
 #endif // CALCULATE_DISTANCE_HPP
-//31 10 2025
+       // 31 10 2025

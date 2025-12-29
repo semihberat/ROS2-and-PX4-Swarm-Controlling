@@ -1,4 +1,5 @@
 #include <rclcpp/rclcpp.hpp>
+#include <deque>
 
 // ========== PX4_MSGS ==========
 
@@ -67,7 +68,7 @@ private:
     rclcpp::TimerBase::SharedPtr timer_;
 
     // Data Queues
-    std::vector<VehicleGlobalPosition> neighbor_gps_queue_;
+    std::deque<VehicleGlobalPosition> neighbor_gps_queue_;
     std::vector<uint8_t> neighbor_id_queue_;
 
     rclcpp::Subscription<TargetPositions>::SharedPtr target_position_subscription_;
@@ -80,7 +81,7 @@ private:
     void publish_gps_to_neighbors();
     void gps_callback(const VehicleGlobalPosition::SharedPtr msg);
     void local_position_callback(const VehicleLocalPosition::SharedPtr msg);
-    void listen_neighbors(rclcpp::QoS qos);
+    void listen_neighbors(const rclcpp::QoS& qos);
     void neighbor_gps_callback(const VehicleGlobalPosition::SharedPtr msg);
 };
 
@@ -94,8 +95,11 @@ void NeighborsListener::local_position_callback(const VehicleLocalPosition::Shar
     vehicle_local_position_ = msg;
 }
 
-void NeighborsListener::listen_neighbors(rclcpp::QoS qos)
+void NeighborsListener::listen_neighbors(const rclcpp::QoS& qos)
 {
+    neighbor_subscriptions_.reserve(number_of_drones - 1);
+    neighbor_id_queue_.reserve(number_of_drones - 1);
+
     for (uint8_t i = 1; i <= number_of_drones; i++)
     {
         if (i != sys_id)
@@ -115,7 +119,11 @@ void NeighborsListener::publish_gps_to_neighbors()
     NeighborsInfo msg{};
     msg.main_id = sys_id;
     msg.main_position = *vehicle_gps_position_;
-    msg.neighbor_positions = neighbor_gps_queue_;
+    
+    // Copy deque to vector for message (inevitable as message uses vector)
+    // could optimization by creating a message with vector directly if interface allows, 
+    // but here we just convert efficiently.
+    msg.neighbor_positions.assign(neighbor_gps_queue_.begin(), neighbor_gps_queue_.end());
     msg.neighbor_ids = neighbor_id_queue_;
 
     neighbors_gps_publisher_->publish(msg);
@@ -125,7 +133,7 @@ void NeighborsListener::neighbor_gps_callback(const VehicleGlobalPosition::Share
 {
     if (neighbor_gps_queue_.size() >= static_cast<size_t>(number_of_drones - 1))
     {
-        neighbor_gps_queue_.erase(neighbor_gps_queue_.begin());
+        neighbor_gps_queue_.pop_front();
     }
     neighbor_gps_queue_.push_back(*msg);
 }

@@ -58,11 +58,9 @@ private:
 		if (offboard_setpoint_counter_ == 10)
 		{
 			this->publish_vehicle_command(VehicleCommand::VEHICLE_CMD_DO_SET_MODE, 1, 6);
-			// Arm the vehicle
-			this->arm();
 		}
+		
 		this->publish_offboard_control_mode();
-
 		// stop the counter after reaching 11
 		if (offboard_setpoint_counter_ < 11)
 		{
@@ -76,10 +74,6 @@ private:
 	rclcpp::Publisher<OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;
 	rclcpp::Publisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
 	rclcpp::Publisher<VehicleCommand>::SharedPtr vehicle_command_publisher_;
-
-	// Data Queues
-	std::vector<VehicleGlobalPosition> neighbor_gps_queue_;
-	std::vector<uint8_t> neighbor_id_queue_;
 
 	// Parameters
 	rclcpp::TimerBase::SharedPtr timer_;

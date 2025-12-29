@@ -7,9 +7,6 @@
 #include <iostream>
 #include <stdexcept>
 #include <cmath>
-#define PI 3.14159
-#define EARTH_RADIUS 6371000 // in meters
-
 #include "../../interfaces/vehicle_positions.hpp"
 
 class CalculateOffsetsFromCenter
@@ -18,8 +15,11 @@ public:
     CalculateOffsetsFromCenter() = default;
     ~CalculateOffsetsFromCenter() = default;
 
+    static constexpr float PI_VAL = 3.14159f;
+    static constexpr float EARTH_RADIUS = 6371000.0f; // in meters
+
     template <typename T>
-    std::vector<T> calculate_offsets(const T &center,
+    static std::vector<T> calculate_offsets(const T &center,
                                      float offset_north,
                                      float offset_east,
                                      size_t num_positions)
@@ -43,11 +43,11 @@ public:
 
 private:
     template <typename T>
-    T new_positions_after_offsets(const T &center, int16_t idx, float offset_north, float offset_east)
+    static T new_positions_after_offsets(const T &center, int16_t idx, float offset_north, float offset_east)
     {
         T new_position{};
-        new_position.lat = center.lat + (offset_north * idx / EARTH_RADIUS) * (180 / PI);
-        new_position.lon = center.lon + (offset_east * idx / EARTH_RADIUS) * (180 / PI) / cos(center.lat * PI / 180);
+        new_position.lat = center.lat + (offset_north * idx / EARTH_RADIUS) * (180.0f / PI_VAL);
+        new_position.lon = center.lon + (offset_east * idx / EARTH_RADIUS) * (180.0f / PI_VAL) / cos(center.lat * PI_VAL / 180.0f);
         return new_position;
     }
 };

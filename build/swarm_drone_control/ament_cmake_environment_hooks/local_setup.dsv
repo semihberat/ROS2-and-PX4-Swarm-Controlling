@@ -1,0 +1,4 @@
+source;share/swarm_drone_control/environment/ament_prefix_path.sh
+source;share/swarm_drone_control/environment/library_path.sh
+source;share/swarm_drone_control/environment/path.sh
+source;share/swarm_drone_control/environment/pythonpath.sh
