@@ -1,112 +1,30 @@
-// Standard Libraries
-#include <iostream>
-#include <rclcpp/rclcpp.hpp>
-#include <stdint.h>
-#include <tuple>
-#include <vector>
-#include <string>
-#include <cmath>
-#include <mutex>
-#include <atomic>
-#include <chrono>
-#include <memory>
-#include <cstdint> // uint32_t için
+#include "swarm_drone_control/swarm_member_path_planner.hpp"
 
-#include "rclcpp_lifecycle/lifecycle_node.hpp"
-
-#include <px4_msgs/msg/vehicle_global_position.hpp>
-#include <sensor_msgs/msg/nav_sat_fix.hpp>
-
-// Custom Interface for Neighbors Info
-#include <custom_interfaces/msg/neighbors_info.hpp>
-#include <custom_interfaces/msg/target_positions.hpp>
-
-// Path Planning Formulations
-#include "../formulations/geographic/calculate_center_of_gravity.hpp"
-#include "../formulations/geographic/calculate_offset_from_center.hpp"
-#include "../formulations/geographic/calculate_distance.hpp"
-
-// interfaces
-#include "../interfaces/vehicle_positions.hpp"
-#include "../interfaces/vectoral_distance.hpp"
-
-#include <px4_msgs/msg/trajectory_setpoint.hpp>
-
-using namespace lifecycle_msgs::msg;
-using namespace px4_msgs::msg;
-using namespace custom_interfaces::msg;
-using namespace std::placeholders;
-using namespace std::chrono_literals;
-using namespace std::chrono;
-using LifecycleCallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
-
-class SwarmMemberPathPlanner : public rclcpp_lifecycle::LifecycleNode
+// === CONSTRUCTOR ===
+SwarmMemberPathPlanner::SwarmMemberPathPlanner() : LifecycleNode("swarm_member_path_planner")
 {
-public:
-    SwarmMemberPathPlanner() : LifecycleNode("swarm_member_path_planner")
+    // Initialize QoS profile for sensor data
+    rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+    auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
+
+    // Declare parameter for each swarm member's system ID
+    this->declare_parameter("sys_id", 1);
+
+    std::string ntpc = "/px4_" + std::to_string(this->get_parameter("sys_id").as_int()) + "/neighbors_info";
+
+    neighbors_info_subscription_ = this->create_subscription<NeighborsInfo>(
+        ntpc, qos,
+        std::bind(&SwarmMemberPathPlanner::path_planner_callback, this, _1));
+}
+
+// === TIMER CALLBACK ===
+void SwarmMemberPathPlanner::timer_callback()
+{
     {
-        // Initialize QoS profile for sensor data
-        rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
-        auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
-
-        // Declare parameter for each swarm member's system ID
-        this->declare_parameter("sys_id", 1);
-
-        std::string ntpc = "/px4_" + std::to_string(this->get_parameter("sys_id").as_int()) + "/neighbors_info";
-
-        neighbors_info_subscription_ = this->create_subscription<NeighborsInfo>(
-            ntpc, qos,
-            std::bind(&SwarmMemberPathPlanner::path_planner_callback, this, _1));
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        publish_trajectory_setpoint(target_vlat, target_vlon, 0.0, 0.0);
     }
-
-private:
-    // Timer callback function
-    void timer_callback()
-    {
-        {
-            std::lock_guard<std::mutex> lock(data_mutex_);
-            publish_trajectory_setpoint(target_vlat, target_vlon, 0.0, 0.0);
-        }
-    }
-
-    // Subscribers
-    rclcpp::Subscription<NeighborsInfo>::SharedPtr neighbors_info_subscription_;
-
-    // Publishers
-    rclcpp_lifecycle::LifecyclePublisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
-
-    // Timer
-    rclcpp::TimerBase::SharedPtr timer_;
-
-    // Temporary variables
-    VehicleVerticalPositions target_position_;
-    float target_dlat, target_dlon;
-    float target_vlat, target_vlon;
-    unsigned int verification_count = 0;
-    const unsigned int verification_count_max = 20;
-    float offset_lat = 2.0f;
-    float offset_lon = 2.0f;
-    float desired_vel = 5.0f;
-    std::mutex data_mutex_;
-    // Lists
-    std::vector<px4_msgs::msg::VehicleGlobalPosition> all_positions;
-
-    // Safety Parameters
-    const float collision_tolerance_m = sqrt(pow(offset_lat, 2) + pow(offset_lon, 2)) / 2.0f;
-
-    // Subscribers
-    void path_planner_callback(const NeighborsInfo::SharedPtr msg);
-
-    // Publishers
-    void publish_trajectory_setpoint(float x, float y, float z, float yaw_rad);
-
-    LifecycleCallbackReturn on_configure(const rclcpp_lifecycle::State &);
-    LifecycleCallbackReturn on_activate(const rclcpp_lifecycle::State &previous_state);
-    LifecycleCallbackReturn on_deactivate(const rclcpp_lifecycle::State &previous_state);
-    LifecycleCallbackReturn on_cleanup(const rclcpp_lifecycle::State &previous_state);
-    LifecycleCallbackReturn on_shutdown(const rclcpp_lifecycle::State &previous_state);
-    LifecycleCallbackReturn on_error(const rclcpp_lifecycle::State &previous_state);
-};
+}
 
 LifecycleCallbackReturn SwarmMemberPathPlanner::on_configure(const rclcpp_lifecycle::State &)
 {

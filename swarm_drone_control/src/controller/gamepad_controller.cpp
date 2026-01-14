@@ -38,209 +38,176 @@
  * @author Nuno Marques <nuno.marques@dronesolutions.io>
  */
 
-#include <px4_msgs/msg/offboard_control_mode.hpp>
-#include <px4_msgs/msg/trajectory_setpoint.hpp>
-#include <px4_msgs/msg/vehicle_command.hpp>
-#include <px4_msgs/msg/vehicle_control_mode.hpp>
-#include <px4_msgs/msg/vehicle_attitude.hpp>
-#include <px4_msgs/msg/vehicle_status.hpp>
+#include "swarm_drone_control/gamepad_controller.hpp"
 
-#include <rclcpp_lifecycle/lifecycle_node.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <stdint.h>
-#include <sensor_msgs/msg/joy.hpp>
-#include <chrono>
-#include <iostream>
-
-using namespace std::chrono;
-using namespace std::chrono_literals;
-using namespace px4_msgs::msg;
-using namespace std::placeholders;
-
-using LifecycleCallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
-
-class OffboardControl : public rclcpp_lifecycle::LifecycleNode
+// === CONSTRUCTOR ===
+OffboardControl::OffboardControl() : LifecycleNode("offboard_control")
 {
-public:
-    OffboardControl() : LifecycleNode("offboard_control")
+    this->declare_parameter("sys_id", 1);
+}
+
+// === LIFECYCLE CALLBACKS ===
+LifecycleCallbackReturn OffboardControl::on_configure(const rclcpp_lifecycle::State &)
+{
+    RCLCPP_INFO(this->get_logger(), "ON_CONFIGURE");
+
+    rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+    auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
+
+    int sys_id = this->get_parameter("sys_id").as_int();
+
+    std::string OFFBOARD_CONTROL_MODE = "/px4_" + std::to_string(sys_id) + "/fmu/in/offboard_control_mode";
+    std::string TRAJECTORY_SETPOINT = "/px4_" + std::to_string(sys_id) + "/fmu/in/trajectory_setpoint";
+    std::string VEHICLE_COMMAND = "/px4_" + std::to_string(sys_id) + "/fmu/in/vehicle_command";
+    std::string VEHICLE_ATTITUDE = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_attitude";
+    std::string VEHICLE_STATUS = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_status_v1";
+
+    offboard_control_mode_publisher_ = this->create_publisher<OffboardControlMode>(OFFBOARD_CONTROL_MODE, 10);
+    trajectory_setpoint_publisher_ = this->create_publisher<TrajectorySetpoint>(TRAJECTORY_SETPOINT, 10);
+    vehicle_command_publisher_ = this->create_publisher<VehicleCommand>(VEHICLE_COMMAND, 10);
+
+    joy_subscriber_ = this->create_subscription<sensor_msgs::msg::Joy>(
+        "/joy", 10, std::bind(&OffboardControl::joy_subscriber_callback, this, _1));
+    vehicle_attitude_subscriber_ = this->create_subscription<px4_msgs::msg::VehicleAttitude>(
+        VEHICLE_ATTITUDE, qos, std::bind(&OffboardControl::listen_to_altitude, this, _1));
+    vehicle_status_subscriber_ = this->create_subscription<px4_msgs::msg::VehicleStatus>(
+        VEHICLE_STATUS, qos, std::bind(&OffboardControl::vehicle_status_listener_callback, this, _1));
+
+    offboard_setpoint_counter_ = 0;
+
+    auto timer_callback = [this]() -> void
     {
-        this->declare_parameter("sys_id", 1);
-    }
-
-    LifecycleCallbackReturn on_configure(const rclcpp_lifecycle::State &) override
-    {
-        RCLCPP_INFO(this->get_logger(), "ON_CONFIGURE");
-
-        rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
-        auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
-
-        int sys_id = this->get_parameter("sys_id").as_int();
-
-        std::string OFFBOARD_CONTROL_MODE = "/px4_" + std::to_string(sys_id) + "/fmu/in/offboard_control_mode";
-        std::string TRAJECTORY_SETPOINT = "/px4_" + std::to_string(sys_id) + "/fmu/in/trajectory_setpoint";
-        std::string VEHICLE_COMMAND = "/px4_" + std::to_string(sys_id) + "/fmu/in/vehicle_command";
-        std::string VEHICLE_ATTITUDE = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_attitude";
-        std::string VEHICLE_STATUS = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_status_v1";
-
-        offboard_control_mode_publisher_ = this->create_publisher<OffboardControlMode>(OFFBOARD_CONTROL_MODE, 10);
-        trajectory_setpoint_publisher_ = this->create_publisher<TrajectorySetpoint>(TRAJECTORY_SETPOINT, 10);
-        vehicle_command_publisher_ = this->create_publisher<VehicleCommand>(VEHICLE_COMMAND, 10);
-
-        joy_subscriber_ = this->create_subscription<sensor_msgs::msg::Joy>(
-            "/joy", 10, std::bind(&OffboardControl::joy_subscriber_callback, this, _1));
-        vehicle_attitude_subscriber_ = this->create_subscription<px4_msgs::msg::VehicleAttitude>(
-            VEHICLE_ATTITUDE, qos, std::bind(&OffboardControl::listen_to_altitude, this, _1));
-        vehicle_status_subscriber_ = this->create_subscription<px4_msgs::msg::VehicleStatus>(
-            VEHICLE_STATUS, qos, std::bind(&OffboardControl::vehicle_status_listener_callback, this, _1));
-
-        offboard_setpoint_counter_ = 0;
-
-        auto timer_callback = [this]() -> void
+        if (joy_msgs == nullptr)
+            return;
+        // Sol joystick sağ-aşağıda tutulursa arm et
+        if (joy_msgs->axes[0] < -0.5f && joy_msgs->axes[1] < -0.5f && !this->vehicle_status_->arming_state)
         {
-            if (joy_msgs == nullptr)
-                return;
-            // Sol joystick sağ-aşağıda tutulursa arm et
-            if (joy_msgs->axes[0] < -0.5f && joy_msgs->axes[1] < -0.5f && !this->is_armed)
+            int arm_timer = 0;
+            arm_timer++;
+            RCLCPP_INFO(this->get_logger(), "[ARM] Holding: %d/20, axes[0]=%.2f, axes[1]=%.2f",
+                        arm_timer, joy_msgs->axes[0], joy_msgs->axes[1]);
+            if (arm_timer > 20)
             {
-                arm_timer++;
-                RCLCPP_INFO(this->get_logger(), "[ARM] Holding: %d/20, armed=%d, axes[0]=%.2f, axes[1]=%.2f",
-                            arm_timer, is_armed, joy_msgs->axes[0], joy_msgs->axes[1]);
-                if (arm_timer > 20)
-                { // 20 mesaj @ ~10Hz = ~2 saniye
-                    RCLCPP_WARN(this->get_logger(), "*** SENDING ARM COMMAND ***");
-                    this->arm();
-                    arm_timer = 0;
-                }
+                RCLCPP_WARN(this->get_logger(), "*** SENDING ARM COMMAND ***");
+                this->arm();
+                arm_timer = 0;
             }
-            else
-            {
-                arm_timer = 0; // Pozisyon bırakılırsa sıfırla
-            }
-            this->relative_movement(joy_msgs->axes[4] * 10, -joy_msgs->axes[3] * 10, -joy_msgs->axes[1] * 10, -joy_msgs->axes[0] * 3.14f); // x, y, z, yawspeed
-                                                                                                                                           // Button B to disarm
-        };
-        timer_ = this->create_wall_timer(100ms, timer_callback);
+        }
+        else
+        {
+            // Pozisyon bırakılırsa sıfırla
+        }
+        this->relative_movement(joy_msgs->axes[4] * 10, -joy_msgs->axes[3] * 10, -joy_msgs->axes[1] * 10, -joy_msgs->axes[0] * 3.14f);
+    };
+    timer_ = this->create_wall_timer(100ms, timer_callback);
+    timer_->cancel();
+
+    return LifecycleCallbackReturn::SUCCESS;
+}
+
+LifecycleCallbackReturn OffboardControl::on_activate(const rclcpp_lifecycle::State &previous_state)
+{
+    RCLCPP_INFO(this->get_logger(), "ON_ACTIVATE");
+
+    offboard_control_mode_publisher_->on_activate();
+    trajectory_setpoint_publisher_->on_activate();
+    vehicle_command_publisher_->on_activate();
+
+    timer_->reset();
+
+    rclcpp_lifecycle::LifecycleNode::on_activate(previous_state);
+    return LifecycleCallbackReturn::SUCCESS;
+}
+
+LifecycleCallbackReturn OffboardControl::on_deactivate(const rclcpp_lifecycle::State &previous_state)
+{
+    RCLCPP_INFO(this->get_logger(), "ON_DEACTIVATE");
+
+    offboard_control_mode_publisher_->on_deactivate();
+    trajectory_setpoint_publisher_->on_deactivate();
+    vehicle_command_publisher_->on_deactivate();
+
+    timer_->cancel();
+
+    rclcpp_lifecycle::LifecycleNode::on_deactivate(previous_state);
+    return LifecycleCallbackReturn::SUCCESS;
+}
+
+LifecycleCallbackReturn OffboardControl::on_cleanup(const rclcpp_lifecycle::State &previous_state)
+{
+    RCLCPP_INFO(this->get_logger(), "ON_CLEANUP");
+
+    offboard_control_mode_publisher_.reset();
+    trajectory_setpoint_publisher_.reset();
+    vehicle_command_publisher_.reset();
+    joy_subscriber_.reset();
+    vehicle_attitude_subscriber_.reset();
+    vehicle_status_subscriber_.reset();
+
+    if (timer_)
+    {
         timer_->cancel();
-
-        return LifecycleCallbackReturn::SUCCESS;
+        timer_.reset();
     }
 
-    LifecycleCallbackReturn on_activate(const rclcpp_lifecycle::State &previous_state) override
+    rclcpp_lifecycle::LifecycleNode::on_cleanup(previous_state);
+    return LifecycleCallbackReturn::SUCCESS;
+}
+
+LifecycleCallbackReturn OffboardControl::on_shutdown(const rclcpp_lifecycle::State &previous_state)
+{
+    RCLCPP_INFO(this->get_logger(), "ON_SHUTDOWN");
+
+    offboard_control_mode_publisher_.reset();
+    trajectory_setpoint_publisher_.reset();
+    vehicle_command_publisher_.reset();
+    joy_subscriber_.reset();
+    vehicle_attitude_subscriber_.reset();
+    vehicle_status_subscriber_.reset();
+
+    if (timer_)
     {
-        RCLCPP_INFO(this->get_logger(), "ON_ACTIVATE");
-
-        offboard_control_mode_publisher_->on_activate();
-        trajectory_setpoint_publisher_->on_activate();
-        vehicle_command_publisher_->on_activate();
-
-        timer_->reset();
-
-        rclcpp_lifecycle::LifecycleNode::on_activate(previous_state);
-        return LifecycleCallbackReturn::SUCCESS;
-    }
-
-    LifecycleCallbackReturn on_deactivate(const rclcpp_lifecycle::State &previous_state) override
-    {
-        RCLCPP_INFO(this->get_logger(), "ON_DEACTIVATE");
-
-        offboard_control_mode_publisher_->on_deactivate();
-        trajectory_setpoint_publisher_->on_deactivate();
-        vehicle_command_publisher_->on_deactivate();
-
         timer_->cancel();
-
-        rclcpp_lifecycle::LifecycleNode::on_deactivate(previous_state);
-        return LifecycleCallbackReturn::SUCCESS;
+        timer_.reset();
     }
 
-    LifecycleCallbackReturn on_cleanup(const rclcpp_lifecycle::State &previous_state) override
+    rclcpp_lifecycle::LifecycleNode::on_shutdown(previous_state);
+    return LifecycleCallbackReturn::SUCCESS;
+}
+
+LifecycleCallbackReturn OffboardControl::on_error(const rclcpp_lifecycle::State &previous_state)
+{
+    RCLCPP_ERROR(this->get_logger(), "ON_ERROR");
+
+    if (timer_)
     {
-        RCLCPP_INFO(this->get_logger(), "ON_CLEANUP");
-
-        offboard_control_mode_publisher_.reset();
-        trajectory_setpoint_publisher_.reset();
-        vehicle_command_publisher_.reset();
-        joy_subscriber_.reset();
-        vehicle_attitude_subscriber_.reset();
-        vehicle_status_subscriber_.reset();
-
-        if (timer_)
-        {
-            timer_->cancel();
-            timer_.reset();
-        }
-
-        rclcpp_lifecycle::LifecycleNode::on_cleanup(previous_state);
-        return LifecycleCallbackReturn::SUCCESS;
+        timer_->cancel();
+        timer_.reset();
     }
+    offboard_control_mode_publisher_.reset();
+    trajectory_setpoint_publisher_.reset();
+    vehicle_command_publisher_.reset();
 
-    LifecycleCallbackReturn on_shutdown(const rclcpp_lifecycle::State &previous_state) override
-    {
-        RCLCPP_INFO(this->get_logger(), "ON_SHUTDOWN");
+    rclcpp_lifecycle::LifecycleNode::on_error(previous_state);
+    return LifecycleCallbackReturn::FAILURE;
+}
 
-        offboard_control_mode_publisher_.reset();
-        trajectory_setpoint_publisher_.reset();
-        vehicle_command_publisher_.reset();
-        joy_subscriber_.reset();
-        vehicle_attitude_subscriber_.reset();
-        vehicle_status_subscriber_.reset();
+// === PUBLIC MEMBER FUNCTIONS ===
 
-        if (timer_)
-        {
-            timer_->cancel();
-            timer_.reset();
-        }
+// === PUBLIC MEMBER FUNCTIONS ===
+void OffboardControl::arm()
+{
+    publish_vehicle_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0);
+    RCLCPP_INFO(this->get_logger(), "Arm command send");
+}
 
-        rclcpp_lifecycle::LifecycleNode::on_shutdown(previous_state);
-        return LifecycleCallbackReturn::SUCCESS;
-    }
+void OffboardControl::disarm()
+{
+    publish_vehicle_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 0.0);
+    RCLCPP_INFO(this->get_logger(), "Disarm command send");
+}
 
-    LifecycleCallbackReturn on_error(const rclcpp_lifecycle::State &previous_state) override
-    {
-        RCLCPP_ERROR(this->get_logger(), "ON_ERROR");
-
-        if (timer_)
-        {
-            timer_->cancel();
-            timer_.reset();
-        }
-        offboard_control_mode_publisher_.reset();
-        trajectory_setpoint_publisher_.reset();
-        vehicle_command_publisher_.reset();
-
-        rclcpp_lifecycle::LifecycleNode::on_error(previous_state);
-        return LifecycleCallbackReturn::FAILURE;
-    }
-
-    void arm();
-    void disarm();
-
-private:
-    std::vector<float> q = std::vector<float>(4, 0.0f); //!< vehicle attitude quaternion
-    rclcpp::TimerBase::SharedPtr timer_;
-    int8_t arm_timer = 0;
-    bool is_armed = false;
-
-    rclcpp_lifecycle::LifecyclePublisher<OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;
-    rclcpp_lifecycle::LifecyclePublisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
-    rclcpp_lifecycle::LifecyclePublisher<VehicleCommand>::SharedPtr vehicle_command_publisher_;
-    rclcpp::Subscription<px4_msgs::msg::VehicleAttitude>::SharedPtr vehicle_attitude_subscriber_;
-    rclcpp::Subscription<px4_msgs::msg::VehicleStatus>::SharedPtr vehicle_status_subscriber_;
-
-    std::atomic<uint64_t> timestamp_;    //!< common synced timestamped
-    uint64_t offboard_setpoint_counter_; //!< counter for the number of setpoints sent
-    rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_subscriber_;
-
-    sensor_msgs::msg::Joy::SharedPtr joy_msgs;
-
-    void publish_trajectory_setpoint(float x, float y, float z, float yawspeed);
-    void joy_subscriber_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
-    void publish_vehicle_command(uint16_t command, float param1 = 0.0, float param2 = 0.0);
-    void relative_movement(float v_x, float v_y, float v_z, float yawspeed);
-    void listen_to_altitude(const px4_msgs::msg::VehicleAttitude::SharedPtr msg);
-    void vehicle_status_listener_callback(const px4_msgs::msg::VehicleStatus::SharedPtr msg);
-};
-
+// === PRIVATE MEMBER FUNCTIONS ===
 void OffboardControl::joy_subscriber_callback(const sensor_msgs::msg::Joy::SharedPtr msg)
 {
     joy_msgs = msg;
@@ -248,59 +215,34 @@ void OffboardControl::joy_subscriber_callback(const sensor_msgs::msg::Joy::Share
 
 void OffboardControl::vehicle_status_listener_callback(const px4_msgs::msg::VehicleStatus::SharedPtr msg)
 {
-    bool prev_armed = this->is_armed;
-    this->is_armed = msg->arming_state == VehicleStatus::ARMING_STATE_ARMED;
-
-    // Her 50 mesajda bir durum yazdır
-    static int msg_count = 0;
-    msg_count++;
-    if (msg_count % 50 == 0 || prev_armed != this->is_armed)
-    {
-        RCLCPP_INFO(this->get_logger(), "[STATUS] arming_state=%d, is_armed=%d",
-                    msg->arming_state, this->is_armed);
-    }
-}
-
-void OffboardControl::arm()
-{
-    publish_vehicle_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 1.0);
-
-    RCLCPP_INFO(this->get_logger(), "Arm command send");
-}
-
-void OffboardControl::disarm()
-{
-    publish_vehicle_command(VehicleCommand::VEHICLE_CMD_COMPONENT_ARM_DISARM, 0.0);
-
-    RCLCPP_INFO(this->get_logger(), "Disarm command send");
+    vehicle_status_ = msg;
 }
 
 void OffboardControl::relative_movement(float v_x, float v_y, float v_z, float yawspeed)
 {
     // Kuaterniyondan yaw açısını hesapla (drone'un yatay düzlemdeki dönüş açısı)
-    float q_yaw = atan2f(2.0f * (q[0] * q[3] + q[1] * q[2]), 1.0f - 2.0f * (q[2] * q[2] + q[3] * q[3]));
+    float q_yaw = atan2f(2.0f * (vehicle_attitude_->q[0] * vehicle_attitude_->q[3] + vehicle_attitude_->q[1] * vehicle_attitude_->q[2]),
+                         1.0f - 2.0f * (vehicle_attitude_->q[2] * vehicle_attitude_->q[2] + vehicle_attitude_->q[3] * vehicle_attitude_->q[3]));
 
     // Joystick komutlarını drone'un yönüne göre dünya koordinatlarına çevir
-    // Örnek: Joystick ileri → drone hangi yöne bakıyorsa o yöne git
-    // Body frame (vücut koordinatı) → NED frame (dünya koordinatı) dönüşümü
     float v_n = v_x * cosf(q_yaw) - v_y * sinf(q_yaw); // Kuzey yönündeki hız
     float v_e = v_x * sinf(q_yaw) + v_y * cosf(q_yaw); // Doğu yönündeki hız
 
     publish_trajectory_setpoint(v_n, v_e, v_z, yawspeed);
-};
+}
 
 void OffboardControl::listen_to_altitude(const px4_msgs::msg::VehicleAttitude::SharedPtr msg)
 {
-    this->q.assign(msg->q.begin(), msg->q.end());
-};
+    vehicle_attitude_ = msg;
+}
 
 void OffboardControl::publish_trajectory_setpoint(float x, float y, float z, float yawspeed)
 {
     TrajectorySetpoint msg{};
-    msg.position = {NAN, NAN, NAN}; // Position NAN olmali ki PX4 velocity'yi kullansın
-    msg.velocity = {x, y, z};       // Velocity in NED frame [m/s]
-    msg.yaw = NAN;                  // Yaw NAN olmali ki yawspeed'i kullansın
-    msg.yawspeed = yawspeed;        // [-PI:PI]
+    msg.position = {NAN, NAN, NAN};
+    msg.velocity = {x, y, z};
+    msg.yaw = NAN;
+    msg.yawspeed = yawspeed;
     msg.timestamp = this->get_clock()->now().nanoseconds() / 1000;
     trajectory_setpoint_publisher_->publish(msg);
 }
