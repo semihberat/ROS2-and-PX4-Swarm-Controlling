@@ -5,7 +5,7 @@ import os
 
 def generate_launch_description():
 
-    number_of_drones = 5
+    number_of_drones = 3
 
     ld = LaunchDescription()
 
@@ -58,7 +58,7 @@ def load_swarm_communication(number_of_drones: int, ld: LaunchDescription):
             name=f'swarm_communication_{idx}',
             parameters=[
                 {"sys_id": idx},
-                {"number_of_drones": number_of_drones}
+                {"total_drones": number_of_drones}
             ]
         )
         ld.add_action(swarm_communication_node)
