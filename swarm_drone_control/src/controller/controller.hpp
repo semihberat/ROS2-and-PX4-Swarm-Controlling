@@ -72,6 +72,8 @@ private:
     px4_msgs::msg::VehicleAttitude::SharedPtr vehicle_attitude_;
     px4_msgs::msg::VehicleStatus::SharedPtr vehicle_status_;
 
+    int arm_timer = 0;
+
     /**
      * @brief Convert joystick to world-frame velocities
      * @param velocity_x Body-frame forward velocity

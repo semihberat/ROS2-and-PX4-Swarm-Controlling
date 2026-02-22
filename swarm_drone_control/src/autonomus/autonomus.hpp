@@ -13,11 +13,14 @@
 #include <chrono>
 #include <memory>
 #include <cstdint>
+#include <algorithm>
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include <px4_msgs/msg/vehicle_global_position.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <custom_interfaces/msg/neighbors_info.hpp>
 #include <custom_interfaces/msg/target_positions.hpp>
+#include <custom_interfaces/msg/waypoints.hpp>
+#include <custom_interfaces/msg/nav_point.hpp>
 #include "calculations/geographic.hpp"
 #include <px4_msgs/msg/trajectory_setpoint.hpp>
 
@@ -46,11 +49,11 @@ private:
     LatLon target_position_;
     float target_dlat, target_dlon;
     float target_vlat, target_vlon;
-    unsigned int verification_count = 0;
-    const unsigned int verification_count_max = 20;
-    float offset_lat = 2.0f;
-    float offset_lon = 2.0f;
-    float desired_vel = 5.0f;
+
+    double current_altitude;
+
+    float desired_vel = 2.0;
+    float desired_z_vel = 2.0;
     std::mutex data_mutex_;
 
     // Neighbors_ INfo
@@ -65,11 +68,14 @@ private:
         END_TASK
     } current_mission = Mission::FORMATIONAL_TAKEOFF;
 
+    // Test base
+    Waypoints::SharedPtr waypoints_;
+    NavPoint current_waypoint_;
     // Lists
-    std::vector<px4_msgs::msg::VehicleGlobalPosition> all_positions;
+    std::vector<px4_msgs::msg::VehicleGlobalPosition>
+        all_positions;
 
     // Safety Parameters
-    const float collision_tolerance_m = sqrt(pow(offset_lat, 2) + pow(offset_lon, 2)) / 2.0f;
 
     /**
      * @brief Send velocity commands to PX4

@@ -1,2 +1,0 @@
-float64 target_dlat
-float64 target_dlon

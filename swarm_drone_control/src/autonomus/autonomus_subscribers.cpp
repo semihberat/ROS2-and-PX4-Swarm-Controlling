@@ -4,4 +4,5 @@
 void SwarmMemberPathPlanner::neighbors_info_subscriber(const NeighborsInfo::SharedPtr msg)
 {
     this->current_neighbors_info_ = msg;
+    current_altitude = msg->main_position.alt;
 }

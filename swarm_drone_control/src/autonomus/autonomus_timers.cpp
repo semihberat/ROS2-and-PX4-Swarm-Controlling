@@ -3,7 +3,7 @@
 // Mission state machine - called every 100ms
 void SwarmMemberPathPlanner::state_cycle_callback()
 {
-    switch (current_mission)
+    switch (this->current_mission)
     {
     case Mission::FORMATIONAL_TAKEOFF:
         formational_takeoff();

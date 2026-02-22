@@ -16,7 +16,7 @@ def generate_launch_description():
     ld = load_path_planners(number_of_drones=number_of_drones, ld=ld)
     ld = load_camera_processes(number_of_cameras=1, ld=ld)
     ld = load_gamepad_controllers(number_of_drones=number_of_drones, ld=ld)
-    ld = load_lidars(number_of_lidars=number_of_drones, ld=ld)
+    #ld = load_lidars(number_of_lidars=number_of_drones, ld=ld)
     return ld
 
 def load_gamepad_controllers(number_of_drones: int, ld: LaunchDescription):

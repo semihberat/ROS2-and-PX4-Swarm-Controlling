@@ -33,7 +33,7 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_activate(const rclcpp_lifecyc
     RCLCPP_INFO(this->get_logger(), "ON_ACTIVATE");
 
     this->trajectory_setpoint_publisher_->on_activate();
-    this->verification_count = 0;
+
     this->timer_->reset();
 
     rclcpp_lifecycle::LifecycleNode::on_activate(previous_state);
