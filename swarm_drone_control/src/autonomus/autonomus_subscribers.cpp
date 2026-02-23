@@ -6,3 +6,8 @@ void SwarmMemberPathPlanner::neighbors_info_subscriber(const NeighborsInfo::Shar
     this->current_neighbors_info_ = msg;
     current_altitude = msg->main_position.alt;
 }
+
+void SwarmMemberPathPlanner::vehicle_attitude_subscriber(const VehicleAttitude::SharedPtr msg)
+{
+    this->current_euler_angles_ = spatial::ToEulerAngles(msg->q);
+}

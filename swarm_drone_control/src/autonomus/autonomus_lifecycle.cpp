@@ -17,6 +17,11 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_configure(const rclcpp_lifecy
         neighbors_topic, qos,
         std::bind(&SwarmMemberPathPlanner::neighbors_info_subscriber, this, std::placeholders::_1));
 
+    std::string attitude_topic = "/px4_" + std::to_string(sys_id) + "/fmu/out/vehicle_attitude";
+    this->vehicle_attitude_subscription_ = this->create_subscription<px4_msgs::msg::VehicleAttitude>(
+        attitude_topic, qos,
+        std::bind(&SwarmMemberPathPlanner::vehicle_attitude_subscriber, this, std::placeholders::_1));
+
     std::string trajectory_topic = "/px4_" + std::to_string(sys_id) + "/fmu/in/trajectory_setpoint";
     this->trajectory_setpoint_publisher_ = this->create_publisher<TrajectorySetpoint>(trajectory_topic, 10);
 
@@ -64,6 +69,7 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_cleanup(const rclcpp_lifecycl
     }
     this->trajectory_setpoint_publisher_.reset();
     this->neighbors_info_subscription_.reset();
+    this->vehicle_attitude_subscription_.reset();
 
     rclcpp_lifecycle::LifecycleNode::on_cleanup(previous_state);
     return LifecycleCallbackReturn::SUCCESS;
@@ -80,6 +86,7 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_shutdown(const rclcpp_lifecyc
     }
     this->trajectory_setpoint_publisher_.reset();
     this->neighbors_info_subscription_.reset();
+    this->vehicle_attitude_subscription_.reset();
 
     rclcpp_lifecycle::LifecycleNode::on_shutdown(previous_state);
     return LifecycleCallbackReturn::SUCCESS;
@@ -96,6 +103,7 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_error(const rclcpp_lifecycle:
     }
     this->trajectory_setpoint_publisher_.reset();
     this->neighbors_info_subscription_.reset();
+    this->vehicle_attitude_subscription_.reset();
 
     rclcpp_lifecycle::LifecycleNode::on_error(previous_state);
     return LifecycleCallbackReturn::FAILURE;

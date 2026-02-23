@@ -44,6 +44,20 @@ namespace geo
     constexpr double EARTH_RADIUS = 6371000.0; // meters
 
     /**
+     * @brief Convert degrees to radians
+     * @param deg Angle in degrees
+     * @return Angle in radians
+     */
+    inline constexpr double deg_to_rad(double deg) { return deg * (PI_VAL / 180.0); }
+
+    /**
+     * @brief Convert radians to degrees
+     * @param rad Angle in radians
+     * @return Angle in degrees
+     */
+    inline constexpr double rad_to_deg(double rad) { return rad * (180.0 / PI_VAL); }
+
+    /**
      * @brief Calculate center of gravity from a list of positions
      * @tparam T1 Return type (e.g., VehicleVerticalPositions)
      * @tparam T2 Input position type
@@ -82,6 +96,19 @@ namespace geo
      * @return Bearing angle in radians [-π, π] (0=North, π/2=East, -π/2=West)
      */
     double calculate_bearing(double lat1, double lon1, double lat2, double lon2);
+
+    /**
+     * @brief Calculate bearing angle from point1 to point2
+     * @tparam T Position type with lat and lon (e.g., LatLon)
+     * @param p_origin Starting position
+     * @param p_target Target position
+     * @return Bearing angle in radians [-π, π] (0=North, π/2=East, -π/2=West)
+     */
+    template <typename T>
+    double calculate_bearing(const T &p_origin, const T &p_target);
+
+    template <typename T>
+    T calculate_new_point(const T &current, const T &reference, double target_bearing_rad);
 
     /**
      * @brief Calculate offset positions from a center point

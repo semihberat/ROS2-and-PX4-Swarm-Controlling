@@ -22,7 +22,9 @@
 #include <custom_interfaces/msg/waypoints.hpp>
 #include <custom_interfaces/msg/nav_point.hpp>
 #include "calculations/geographic.hpp"
+#include "calculations/spatial.hpp"
 #include <px4_msgs/msg/trajectory_setpoint.hpp>
+#include <px4_msgs/msg/vehicle_attitude.hpp>
 
 using namespace lifecycle_msgs::msg;
 using namespace px4_msgs::msg;
@@ -43,6 +45,7 @@ public:
 
 private:
     rclcpp::Subscription<NeighborsInfo>::SharedPtr neighbors_info_subscription_;
+    rclcpp::Subscription<VehicleAttitude>::SharedPtr vehicle_attitude_subscription_;
     rclcpp_lifecycle::LifecyclePublisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
     rclcpp::TimerBase::SharedPtr timer_;
 
@@ -54,10 +57,18 @@ private:
 
     float desired_vel = 2.0;
     float desired_z_vel = 2.0;
+    float desired_yaw_vel = 0.5;
+    float desired_v_lat = 2.0;
+    float desired_v_lon = 2.0;
     std::mutex data_mutex_;
+
+    VehicleGlobalPosition cog;
+    VehicleGlobalPosition nearest_vehicle;
+    VehicleGlobalPosition circular_position;
 
     // Neighbors_ INfo
     NeighborsInfo::SharedPtr current_neighbors_info_;
+    spatial::EulerAngles current_euler_angles_;
 
     enum class Mission
     {
@@ -70,7 +81,7 @@ private:
 
     // Test base
     Waypoints::SharedPtr waypoints_;
-    NavPoint current_waypoint_;
+    VehicleGlobalPosition current_waypoint_;
     // Lists
     std::vector<px4_msgs::msg::VehicleGlobalPosition>
         all_positions;
@@ -127,6 +138,9 @@ private:
 
     /** @brief Update neighbor positions for swarm coordination */
     void neighbors_info_subscriber(const NeighborsInfo::SharedPtr msg);
+
+    /** @brief Update vehicle attitude (Euler angles) */
+    void vehicle_attitude_subscriber(const VehicleAttitude::SharedPtr msg);
 };
 
 #endif // SWARM_MEMBER_PATH_PLANNER_HPP
