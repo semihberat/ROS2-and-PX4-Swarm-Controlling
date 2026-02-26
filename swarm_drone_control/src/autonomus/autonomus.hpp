@@ -14,6 +14,7 @@
 #include <memory>
 #include <cstdint>
 #include <algorithm>
+#include <queue>
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include <px4_msgs/msg/vehicle_global_position.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
@@ -47,7 +48,10 @@ private:
     rclcpp::Subscription<NeighborsInfo>::SharedPtr neighbors_info_subscription_;
     rclcpp::Subscription<VehicleAttitude>::SharedPtr vehicle_attitude_subscription_;
     rclcpp_lifecycle::LifecyclePublisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
+
+    // Timers
     rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::TimerBase::SharedPtr timer_2;
 
     LatLon target_position_;
     float target_dlat, target_dlon;
@@ -65,6 +69,7 @@ private:
     VehicleGlobalPosition cog;
     VehicleGlobalPosition nearest_vehicle;
     VehicleGlobalPosition circular_position;
+    VehicleGlobalPosition target_after_offset;
 
     // Neighbors_ INfo
     NeighborsInfo::SharedPtr current_neighbors_info_;
@@ -77,7 +82,7 @@ private:
         GOTO_POSITION,
         DO_PROCESS,
         END_TASK
-    } current_mission = Mission::FORMATIONAL_TAKEOFF;
+    } current_mission;
 
     // Test base
     Waypoints::SharedPtr waypoints_;
@@ -133,14 +138,18 @@ private:
     /** @brief Advance to next mission step */
     void next_step();
 
-    /** @brief Main state machine timer */
+    /** @brief PARALLEL TIMERS */
     void state_cycle_callback();
+    void collision_avoidance();
 
     /** @brief Update neighbor positions for swarm coordination */
     void neighbors_info_subscriber(const NeighborsInfo::SharedPtr msg);
 
     /** @brief Update vehicle attitude (Euler angles) */
     void vehicle_attitude_subscriber(const VehicleAttitude::SharedPtr msg);
+
+    /** @brief Calculate initial values for mission */
+    void initial_calculations_before_mission();
 };
 
 #endif // SWARM_MEMBER_PATH_PLANNER_HPP

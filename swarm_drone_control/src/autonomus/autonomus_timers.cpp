@@ -3,6 +3,12 @@
 // Mission state machine - called every 100ms
 void SwarmMemberPathPlanner::state_cycle_callback()
 {
+    if (this->current_neighbors_info_ == nullptr)
+    {
+        RCLCPP_WARN(this->get_logger(), "Waiting for neighbors info...");
+        return;
+    }
+
     switch (this->current_mission)
     {
     case Mission::FORMATIONAL_TAKEOFF:
@@ -12,6 +18,7 @@ void SwarmMemberPathPlanner::state_cycle_callback()
         formational_rotation();
         break;
     case Mission::GOTO_POSITION:
+
         goto_position();
         break;
     case Mission::DO_PROCESS:
@@ -21,4 +28,12 @@ void SwarmMemberPathPlanner::state_cycle_callback()
         end_task();
         break;
     }
+}
+
+void SwarmMemberPathPlanner::collision_avoidance()
+{
+}
+
+void SwarmMemberPathPlanner::collision_avoidance()
+{
 }
