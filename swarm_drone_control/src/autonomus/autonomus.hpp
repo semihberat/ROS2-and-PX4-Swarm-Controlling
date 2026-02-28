@@ -15,6 +15,7 @@
 #include <cstdint>
 #include <algorithm>
 #include <queue>
+#include <functional>
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include <px4_msgs/msg/vehicle_global_position.hpp>
 #include <sensor_msgs/msg/nav_sat_fix.hpp>
@@ -26,6 +27,7 @@
 #include "calculations/spatial.hpp"
 #include <px4_msgs/msg/trajectory_setpoint.hpp>
 #include <px4_msgs/msg/vehicle_attitude.hpp>
+#include <custom_interfaces/srv/in_target.hpp>
 
 using namespace lifecycle_msgs::msg;
 using namespace px4_msgs::msg;
@@ -33,8 +35,34 @@ using namespace custom_interfaces::msg;
 using namespace std::placeholders;
 using namespace std::chrono_literals;
 using namespace std::chrono;
+using namespace custom_interfaces::srv;
 
 using LifecycleCallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
+
+namespace autonomus_utils
+{
+    constexpr double STOP_THRESHOLD_01 = 0.1;
+    constexpr double STOP_THRESHOLD_001 = 0.01;
+
+    inline bool NeighborVerification(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors,
+                                     std::function<double(const px4_msgs::msg::VehicleGlobalPosition &)> func)
+    {
+        return std::all_of(neighbors.begin(), neighbors.end(), [func](const px4_msgs::msg::VehicleGlobalPosition &pos)
+                           { return std::abs(func(pos)) <= STOP_THRESHOLD_01; });
+    }
+
+    inline std::vector<DLatDLon> all_distances(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors, const px4_msgs::msg::VehicleGlobalPosition &main_position)
+    {
+        std::vector<DLatDLon> distances;
+        distances.reserve(neighbors.size());
+        for (const auto &neighbor_pos : neighbors)
+        {
+            distances.push_back(geo::calculate_distance<DLatDLon>(main_position.lat, main_position.lon,
+                                                                  neighbor_pos.lat, neighbor_pos.lon));
+        }
+        return distances;
+    }
+}
 
 /**
  * @brief Autonomous swarm member that follows formation and executes missions
@@ -47,8 +75,10 @@ public:
 private:
     rclcpp::Subscription<NeighborsInfo>::SharedPtr neighbors_info_subscription_;
     rclcpp::Subscription<VehicleAttitude>::SharedPtr vehicle_attitude_subscription_;
-    rclcpp_lifecycle::LifecyclePublisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
 
+    rclcpp_lifecycle::LifecyclePublisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
+    rclcpp::Service<InTarget>::SharedPtr in_target_service_;
+    rclcpp::Client<InTarget>::SharedPtr in_target_client_;
     // Timers
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr timer_2;
@@ -71,9 +101,16 @@ private:
     VehicleGlobalPosition circular_position;
     VehicleGlobalPosition target_after_offset;
 
-    // Neighbors_ INfo
+    rclcpp::CallbackGroup::SharedPtr cb_group;
+    rclcpp::CallbackGroup::SharedPtr cb_group_2;
+
+    // Neighbors info
     NeighborsInfo::SharedPtr current_neighbors_info_;
     spatial::EulerAngles current_euler_angles_;
+
+    std::vector<DLatDLon> initial_n_distances;
+    std::vector<DLatDLon> current_n_distances;
+    std::vector<InTarget::Request::SharedPtr> positioned_drones_;
 
     enum class Mission
     {
@@ -83,6 +120,12 @@ private:
         DO_PROCESS,
         END_TASK
     } current_mission;
+
+    struct CollisionBias
+    {
+        float vlat = 0.0;
+        float vlon = 0.0;
+    } collision_bias;
 
     // Test base
     Waypoints::SharedPtr waypoints_;
@@ -150,6 +193,11 @@ private:
 
     /** @brief Calculate initial values for mission */
     void initial_calculations_before_mission();
+
+    /** @brief In target service callback */
+    void in_target_callback(const InTarget::Request::SharedPtr request, const InTarget::Response::SharedPtr response);
+    void in_target_client_callback(rclcpp::Client<InTarget>::SharedFuture future);
+    void call_in_target_client();
 };
 
 #endif // SWARM_MEMBER_PATH_PLANNER_HPP

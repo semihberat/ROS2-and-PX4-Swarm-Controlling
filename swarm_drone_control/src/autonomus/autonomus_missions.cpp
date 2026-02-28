@@ -1,25 +1,4 @@
 #include "autonomus.hpp"
-#define STOP_THRESHOLD 0.01
-
-// Utilities
-bool NeighborVerification(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors,
-                          std::function<double(const px4_msgs::msg::VehicleGlobalPosition &)> func)
-{
-    return std::all_of(neighbors.begin(), neighbors.end(), [func](const px4_msgs::msg::VehicleGlobalPosition &pos)
-                       { return std::abs(func(pos)) <= STOP_THRESHOLD; });
-}
-
-std::vector<DLatDLon> all_distances(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors, const VehicleGlobalPosition &main_position)
-{
-    std::vector<DLatDLon> distances;
-    distances.reserve(neighbors.size());
-    for (const auto &neighbor_pos : neighbors)
-    {
-        distances.push_back(geo::calculate_distance<DLatDLon>(main_position.lat, main_position.lon,
-                                                              neighbor_pos.lat, neighbor_pos.lon));
-    }
-    return distances;
-}
 
 // SWARM MEMBER PATH PLANNER IMPLEMENTATIONS
 
@@ -28,14 +7,14 @@ void SwarmMemberPathPlanner::formational_takeoff()
 {
     double z_error = current_altitude + current_waypoint_.alt;
     double z_vel = std::clamp<float>(z_error * 0.5, -desired_z_vel, desired_z_vel);
-    if (std::abs(z_error) <= STOP_THRESHOLD)
+    if (std::abs(z_error) <= autonomus_utils::STOP_THRESHOLD_001)
     {
 
-        if (NeighborVerification(this->current_neighbors_info_->neighbor_positions,
-                                 [this](const px4_msgs::msg::VehicleGlobalPosition &pos)
-                                 {
-                                     return -pos.alt - current_waypoint_.alt;
-                                 }))
+        if (autonomus_utils::NeighborVerification(this->current_neighbors_info_->neighbor_positions,
+                                                  [this](const px4_msgs::msg::VehicleGlobalPosition &pos)
+                                                  {
+                                                      return -pos.alt - current_waypoint_.alt;
+                                                  }))
         {
             next_step();
             return;
@@ -55,12 +34,24 @@ void SwarmMemberPathPlanner::formational_rotation()
     double v_lon = std::clamp<float>(d.dlon_meter * 0.5, -desired_v_lon, desired_v_lon);
     double yaw_vel = std::clamp<float>(d.dlat_meter * 0.5, -desired_yaw_vel, desired_yaw_vel);
 
+    //Print positioned drones
+    for (const auto &drone : positioned_drones_)
+    {
+        RCLCPP_INFO(this->get_logger(), "Positioned drone: %d", drone->drone_id);
+        RCLCPP_INFO(this->get_logger(), "Positioned drone: %d", drone->is_in_position);
+    }
     // Check Neighbors
-    if (std::abs(d.distance) <= STOP_THRESHOLD)
+    if (std::abs(d.distance) < autonomus_utils::STOP_THRESHOLD_001)
     {
         publish_trajectory_setpoint(0.0, 0.0, 0.0, 0.0);
-        next_step();
-        return;
+        call_in_target_client();
+
+        if (std::all_of(positioned_drones_.begin(), positioned_drones_.end(), [](const InTarget::Request::SharedPtr &request)
+                    { return request->is_in_position; }))
+        {
+            next_step();
+            return; 
+        }
     }
     publish_trajectory_setpoint(v_lat, v_lon, 0.0, yaw_vel);
 }
@@ -73,10 +64,17 @@ void SwarmMemberPathPlanner::goto_position()
                                                target_after_offset.lat, target_after_offset.lon);
     double v_lat = std::clamp<float>(d.dlat_meter * 0.5, -desired_v_lat, desired_v_lat);
     double v_lon = std::clamp<float>(d.dlon_meter * 0.5, -desired_v_lon, desired_v_lon);
+    double bearing = geo::calculate_bearing<VehicleGlobalPosition>(this->current_neighbors_info_->main_position, target_after_offset);
+    double yaw_vel = std::clamp<float>(bearing * 0.5, -desired_yaw_vel, desired_yaw_vel);
 
-    if (std::abs(d.distance) <= STOP_THRESHOLD)
+
+    v_lat += collision_bias.vlat;
+    v_lon += collision_bias.vlon;
+
+    if (std::abs(d.distance) <= autonomus_utils::STOP_THRESHOLD_001)
     {
         publish_trajectory_setpoint(0.0, 0.0, 0.0, 0.0);
+        timer_2->cancel();
         next_step();
         return;
     }
@@ -122,6 +120,8 @@ void SwarmMemberPathPlanner::next_step()
 
         target_after_offset = geo::calculate_offsets<VehicleGlobalPosition>(current_waypoint_,
                                                                             radius_from_cog.dlat_meter, radius_from_cog.dlon_meter, 1)[0];
+
+        initial_n_distances = autonomus_utils::all_distances(this->current_neighbors_info_->neighbor_positions, this->current_neighbors_info_->main_position);
 
         this->current_mission = Mission::GOTO_POSITION;
         break;

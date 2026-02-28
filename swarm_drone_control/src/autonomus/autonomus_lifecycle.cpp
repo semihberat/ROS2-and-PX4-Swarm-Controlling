@@ -29,8 +29,8 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_configure(const rclcpp_lifecy
         100ms, std::bind(&SwarmMemberPathPlanner::state_cycle_callback, this));
     this->timer_->cancel();
 
-    // this->timer_2 = this->create_wall_timer(100ms, std::bind(&SwarmMemberPathPlanner::state_cycle_callback, this));
-    // this->timer_2->cancel();
+    this->timer_2 = this->create_wall_timer(100ms, std::bind(&SwarmMemberPathPlanner::collision_avoidance, this));
+    this->timer_2->cancel();
 
     current_mission = Mission::FORMATIONAL_TAKEOFF;
 
@@ -43,9 +43,8 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_activate(const rclcpp_lifecyc
     RCLCPP_INFO(this->get_logger(), "ON_ACTIVATE");
 
     this->trajectory_setpoint_publisher_->on_activate();
-
     this->timer_->reset();
-    // this->timer_2->reset();
+    this->timer_2->reset();
 
     rclcpp_lifecycle::LifecycleNode::on_activate(previous_state);
     return LifecycleCallbackReturn::SUCCESS;
@@ -57,7 +56,7 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_deactivate(const rclcpp_lifec
     RCLCPP_INFO(this->get_logger(), "ON_DEACTIVATE");
 
     this->timer_->cancel();
-    // this->timer_2->cancel();
+    this->timer_2->cancel();
     this->trajectory_setpoint_publisher_->on_deactivate();
 
     rclcpp_lifecycle::LifecycleNode::on_deactivate(previous_state);
@@ -74,15 +73,14 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_cleanup(const rclcpp_lifecycl
         this->timer_->cancel();
         this->timer_.reset();
     }
-    /*     if (this->timer_2)
-        {
-            this->timer_2->cancel();
-            this->timer_2.reset();
-        } */
+    if (this->timer_2)
+    {
+        this->timer_2->cancel();
+        this->timer_2.reset();
+    }
     this->trajectory_setpoint_publisher_.reset();
     this->neighbors_info_subscription_.reset();
     this->vehicle_attitude_subscription_.reset();
-
     rclcpp_lifecycle::LifecycleNode::on_cleanup(previous_state);
     return LifecycleCallbackReturn::SUCCESS;
 }
@@ -96,15 +94,14 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_shutdown(const rclcpp_lifecyc
         this->timer_->cancel();
         this->timer_.reset();
     }
-    /*  if (this->timer_2)
-     {
-         this->timer_2->cancel();
-         this->timer_2.reset();
-     } */
+    if (this->timer_2)
+    {
+        this->timer_2->cancel();
+        this->timer_2.reset();
+    }
     this->trajectory_setpoint_publisher_.reset();
     this->neighbors_info_subscription_.reset();
     this->vehicle_attitude_subscription_.reset();
-
     rclcpp_lifecycle::LifecycleNode::on_shutdown(previous_state);
     return LifecycleCallbackReturn::SUCCESS;
 }
@@ -118,15 +115,14 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_error(const rclcpp_lifecycle:
         this->timer_->cancel();
         this->timer_.reset();
     }
-    /*     if (this->timer_2)
-        {
-            this->timer_2->cancel();
-            this->timer_2.reset();
-        } */
+    if (this->timer_2)
+    {
+        this->timer_2->cancel();
+        this->timer_2.reset();
+    }
     this->trajectory_setpoint_publisher_.reset();
     this->neighbors_info_subscription_.reset();
     this->vehicle_attitude_subscription_.reset();
-
     rclcpp_lifecycle::LifecycleNode::on_error(previous_state);
     return LifecycleCallbackReturn::FAILURE;
 }
