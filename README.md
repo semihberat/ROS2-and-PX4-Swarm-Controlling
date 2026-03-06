@@ -39,6 +39,11 @@ Bu döküman, projenin matematiksel altyapısını, otonom seyir logaritmasını
     - 10.2. Build İşlemleri
     - 10.3. Çalıştırma Parametreleri
     - 10.4. ROS Topic Haritası
+11. [Gerçek Dünya Donanım ve Ağ Kılavuzu (Hardware & Network Setup)](#11-gerçek-dünya-donanım-ve-ağ-kılavuzu)
+    - 11.1. Uçuş Kontrol Kartı ve Companion Computer Seçimi
+    - 11.2. Ağ Topolojisi: Wi-Fi Mesh vs Access Point (AP)
+    - 11.3. Uzun Mesafe İletişim (Long-Range Telemetry)
+    - 11.4. Donanımsal Olarak Sistem Blok Şeması
 
 ---
 
@@ -329,6 +334,63 @@ Sistem Lifecycle uyumlu olduğu için Terminal'den yayınlandıktan sonra `[Unco
   - `fmu/out/vehicle_local_position` veya `/global_position`: PX4 tarafından basılan İHA durumu.
   - `fmu/out/vehicle_attitude`: Quaternion olarak drone'un açılımsal yalpalama bilgileri.
   - `neighbors_info`: (Bağımsız özel arayüz) Yakınlardaki sürünün `lat/lon` kimlik haritası, kendi otonomisine veri sağlaması.
+
+---
+
+## 11. Gerçek Dünya Donanım ve Ağ Kılavuzu
+
+Yazılım mimarisi başarılı bir şekilde SITL (Simülasyon) üzerinde test edildikten sonra gerçek saha uçuşları (Real-world operations) için aşağıdaki donanım ve RF (Radyo Frekans) altyapısının kurulması hayati önem taşır. Merkeziyetsiz çalışan bu ROS 2 sürüsünde "İletişim, her şeydir."
+
+### 11.1. Uçuş Kontrol Kartı ve Companion Computer Seçimi
+Sistemin sahada uçabilmesi için İHA'ların iç donanımı ikiye ayrılır:
+
+1. **Low-Level (FCU) Autopilot:** Sadece sensörleri okuyan (IMU, Barometre, GPS) ve motor ESC'lerine elektrik sinyali PWM basan kart. 
+   - *Önerilen:* **Pixhawk 4, Pixhawk 6C / 6X veya Cube Orange+**
+   - *Protokol:* Üzerlerinde PX4 Autopilot yüklü olmalı, uçuş kartındaki `TELEM 1` veya `TELEM 2` portları C++ otonomi yazılımı ile konuşmak üzere seri port (`/dev/ttyUSB0`) aracılığıyla Companion bilgisayarına aktarılmalıdır.
+2. **High-Level (Companion Computer):** Sizin yazdığınız bu C++ ROS 2 Node'unu, WGS84 CoG hesaplamalarını yapan ana işlemcidir.
+   - *Önerilen:* **Raspberry Pi 4 (Mod B) veya Raspberry Pi 5 / NVIDIA Jetson Nano / Xavier NX**
+   - *Sebep:* `Micro-XRCE-DDS` altyapısı ve ROS 2 Humble doğrudan bu bilgisayarlara kurulur. Hem Wi-Fi çipi bulunduğu için hem de seri bağlantı hatları barındırdığı için FCU'nun doğrudan beyni olur.
+
+### 11.2. Ağ Topolojisi: Wi-Fi Mesh vs Access Point (AP)
+Dağıtık ROS 2 ağı (DDS/eProsima FastDDS) cihazların birbiriyle IP üzerinden pürüzsüz konuşabilmesini arzular. Bunun için ağ mimarisi 2 yolla çözülür:
+
+#### A) Güçlü Bir Access Point (Çapraz Merkez - Star Topology)
+Sahada yüksek performanslı ve çift bant yayın yapan dairesel antenli kurumsal bir yönlendirici (Router/AP) bulunur. 
+- **Yer İstasyonu Cihazı:** **Ubiquiti (UniFi) serisi, MikroTik Dış Mekan Outdoor Router** veya standart işleyici olarak **TP-Link CPE710 (Kısmi)** gibi güçlü cihazlar.
+- **Mantık:** Bütün dronlardaki Raspberry Pi Wi-Fi adaptörleri aynı ağın SSID şifresini bilerek bu istasyona bağlanır. DDS (Discovery) multicast yayınları havada `192.168.1.X` ipleri üzerinden seker. Çok maliyetli olmamakla beraber en stabil laboratuvar/test uçuşu çözümüdür.
+- *Dezavantaj:* Drone filosu Access Point'ten $3$ - $4 \text{ km}$ uzaklaşınca zayıflama kaynaklı pakedi atlatmaları (Packet Loss) başlar. Star topolojisi olduğu için AP çökerse İHA'lar birbirinin DDS mesaj paketlerini göremez.
+
+#### B) Wi-Fi Ad-Hoc / Mesh Network (Düğüm Ağı - Tam Merkeziyetsiz)
+Eğer devasa bir swarm yapılıyorsa ve bir baz istasyonuna bağlanmak otonomiyi zedeliyorsa "Mesh Mimarisi" kurulur. 
+- **Donanım:** Dronların üzerlerine takılan (Veya Wi-Fi çipleri BATMAN-adv protokülüyle modlanan) **Alfa Network USB Adaptörler** veya daha profesyoneli olan **Doodle Labs Mesh Rider** modülleri.
+- **Mantık:** Ağda bir "Modem" yoktur. $10$ numaralı İHA, $5$ numaralı İHA üzerinden sekerek $1$ numaralı İHA'ya mesaj atabilir. İHA'ların bizzat kendileri o uçan uçağın bir modemidir (Flying Node). 
+- *Avantaj:* Menzil sınırı yoktur; öndeki drone arkadaki drone'a köprü (bridge) görevi gördüğü müddetçe sürü dünyayı turlayabilir! ROS 2 DDS'in doğasına (P2P) eşsiz bir uyum sağlar.
+
+### 11.3. Uzun Mesafe İletişim (Long-Range Telemetry)
+Wi-Fi mesafeleri anten Gain'ine ($\mathrm{dBi}$) bağlı olarak maksimum $1$ ile $3 \mathrm{\ km}$ civarında tutulur. Eğer sistem askeri düzeyde bir arama kurtarma sürüsü ($10\mathrm{+} \mathrm{\ km}$) olarak kullanılacaksa standart Wi-Fi çipleri sökülüp özel RF modülasyonları eklenir:
+1. **RFD900X Telemetry Modelleri:** $900 \mathrm{\ MHz}$ üzerinden Point-to-Multipoint yayın yapar. Mesh altyapısı ile çoklu bağlantıyı destekler (DDS Discovery profilleri biraz kısıtlanmak/daraltılmak zorundadır).
+2. **LTE / 4G-5G Modülasyonları:** Dronedaki Raspberry Pi sistemlerine takılan birer $4\mathrm{G}$ simkart modül modemi, verileri hücresel ağlar üzerinden **Husarnet VPN** veya **Tailscale** peer-to-peer tünellemeyle bağlar. DDS doğrudan mobil ağdan havada haberleşir. Sınırlar komple kalkar!
+
+### 11.4. Donanımsal Olarak Sistem Blok Şeması
+
+```text
+[DRONE 1]                                               [DRONE 2] 
+┌────────────────────────────┐                          ┌────────────────────────────┐
+│ ┌────────────────────────┐ │                          │ ┌────────────────────────┐ │
+│ │ Raspberry Pi 4 (ROS 2) │ │ <---(Wi-Fi UDP/DDS)--->  │ │ Raspberry Pi 4 (ROS 2) │ │
+│ │ "autonomus" Node'u Çlş.│ │          (veya)          │ │ "autonomus" Node'u Çlş.│ │
+│ └───────────┬────────────┘ │      <Mesh-Husarnet>     │ └───────────┬────────────┘ │
+│             │ (UART/Serial)│                          │             │ (UART/Serial)│
+│ ┌───────────▼────────────┐ │                          │ ┌───────────▼────────────┐ │
+│ │ Pixhawk FCU (PX4 UORB) │ │                          │ │ Pixhawk FCU (PX4 UORB) │ │
+│ │ RPM ve Çırpıntı İdaresi│ │                          │ │ RPM ve Çırpıntı İdaresi│ │
+│ └───────────┬────────────┘ │                          │ └───────────┬────────────┘ │
+│             │ (PWM Hız)    │                          │             │ (PWM Hız)    │
+│            ESC             │                          │            ESC             │
+└────────────────────────────┘                          └────────────────────────────┘
+              ▲
+              │   <---- (Örn) Bir Ubiquiti Outdoor Access Point Yönlendiricisi
+```
 
 ---
 
