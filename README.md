@@ -351,20 +351,26 @@ Sistemin sahada uçabilmesi için İHA'ların iç donanımı ikiye ayrılır:
    - *Önerilen:* **Raspberry Pi 4 (Mod B) veya Raspberry Pi 5 / NVIDIA Jetson Nano / Xavier NX**
    - *Sebep:* `Micro-XRCE-DDS` altyapısı ve ROS 2 Humble doğrudan bu bilgisayarlara kurulur. Hem Wi-Fi çipi bulunduğu için hem de seri bağlantı hatları barındırdığı için FCU'nun doğrudan beyni olur.
 
-### 11.2. Ağ Topolojisi: Wi-Fi Mesh vs Access Point (AP)
-Dağıtık ROS 2 ağı (DDS/eProsima FastDDS) cihazların birbiriyle IP üzerinden pürüzsüz konuşabilmesini arzular. Bunun için ağ mimarisi 2 yolla çözülür:
+### 11.2. Donanım ve Ağ Topolojisi: Drone ve Yer İstasyonu Cihazları
+Dağıtık ROS 2 ağı (DDS/eProsima FastDDS) cihazların birbiriyle IP üzerinden pürüzsüz konuşabilmesini arzular. Wi-Fi bandında (2.4 GHz veya 5 GHz) uzun menzilli bir çözüm için cihazların donanım seçimi kritik düzeydedir:
 
-#### A) Güçlü Bir Access Point (Çapraz Merkez - Star Topology)
-Sahada yüksek performanslı ve çift bant yayın yapan dairesel antenli kurumsal bir yönlendirici (Router/AP) bulunur. 
-- **Yer İstasyonu Cihazı:** **Ubiquiti (UniFi) serisi, MikroTik Dış Mekan Outdoor Router** veya standart işleyici olarak **TP-Link CPE710 (Kısmi)** gibi güçlü cihazlar.
-- **Mantık:** Bütün dronlardaki Raspberry Pi Wi-Fi adaptörleri aynı ağın SSID şifresini bilerek bu istasyona bağlanır. DDS (Discovery) multicast yayınları havada `192.168.1.X` ipleri üzerinden seker. Çok maliyetli olmamakla beraber en stabil laboratuvar/test uçuşu çözümüdür.
-- *Dezavantaj:* Drone filosu Access Point'ten $3$ - $4 \text{ km}$ uzaklaşınca zayıflama kaynaklı pakedi atlatmaları (Packet Loss) başlar. Star topolojisi olduğu için AP çökerse İHA'lar birbirinin DDS mesaj paketlerini göremez.
+#### A) Yer Kontrol İstasyonu (GCS - Yerdeki Donanımlar)
+Yer İstasyonu, güçlü bir "Merkezi Access Point (AP)" etrafında tasarlanmalıdır. Standart ev modemleriyle bu operasyon yapılamaz.
+- **Sektörel ve Yönlü Antenler (Base Station):** Yer istasyonunda dronların uçacağı koridora doğru bakan yüksek kazançlı ($15\mathrm{dBi} - 120^\circ$ Sector veya $24\mathrm{dBi}$ Dish) antenler seçilmelidir.
+- **Marka ve Model:** **Ubiquiti Rocket M5** (veya M2) + **airMAX Sector Antenna** kombosu sürüler için endüstri standardıdır. Alternatif olarak **MikroTik BaseBox 5** kullanılabilir.
+- **Ağ İletişim Hattı:** AP cihazı direğe (Tripod) asılır, "PoE (Power over Ethernet)" ile beslenerek aşağıdaki bir **Switch/Modem** portuna CAT6 kablo ile bağlanır. GCS bilgisayarınız (Ubuntu ROS 2 cihazı) doğrudan bu Switch'e kablo ile girerek devasa Wi-Fi havuzuna katılmış olur. Açık alanda bu konfigürasyon $3\mathrm{\ km} - 5\mathrm{\ km}$ arası kayıpsız ROS 2 / UDP pakedi fırlatabilir.
 
-#### B) Wi-Fi Ad-Hoc / Mesh Network (Düğüm Ağı - Tam Merkeziyetsiz)
+#### B) Drone Üzerindeki Modüller ve Antenler (Uçan Donanımlar)
+Dronların kendi üzerlerindeki Raspberry Pi'nin dahili Wi-Fi çipi oldukça zayıftır ($1\mathrm{-}2\mathrm{\ dBi}$), metal/karbon fiber gövde (Faraday kafesi etkisi) altında $30\mathrm{\ metre}$ sonra sinyal kopar. Bu sorunu aşmak için:
+- **Harici Wi-Fi Adaptörleri (USB):** Üzerine harici SMA anten takılabilen yüksek çekim gücüne sahip çipler (Özellikle *Atheros* chipset) gerekir. 
+- **Önerilen Marka:** **Alfa Network AWUS036NHA** (2.4 GHz) veya **AWUS036ACH** (Dual Band) adaptörleri İHA kasasına sabitlenir, RPi'ye USB'den bağlanır ve cihaz `wlan1` olarak ayağa kaldırılır.
+- **Drone Anten Seçimi:** Drone'daki adaptörlere standart çubuk anten yerine yönsüz (Omni-Directional) en az $5\mathrm{\ dBi}$'lik "Mushroom" (Mantar) veya "Dipole" anten takılması yere bakacak şekilde konumlandırılır. Bu sayede drone döndüğünde sinyal kör noktası oluşmaz.
+
+#### C) Wi-Fi Ad-Hoc / Mesh Network (Düğüm Ağı - Tam Merkeziyetsiz)
 Eğer devasa bir swarm yapılıyorsa ve bir baz istasyonuna bağlanmak otonomiyi zedeliyorsa "Mesh Mimarisi" kurulur. 
-- **Donanım:** Dronların üzerlerine takılan (Veya Wi-Fi çipleri BATMAN-adv protokülüyle modlanan) **Alfa Network USB Adaptörler** veya daha profesyoneli olan **Doodle Labs Mesh Rider** modülleri.
-- **Mantık:** Ağda bir "Modem" yoktur. $10$ numaralı İHA, $5$ numaralı İHA üzerinden sekerek $1$ numaralı İHA'ya mesaj atabilir. İHA'ların bizzat kendileri o uçan uçağın bir modemidir (Flying Node). 
-- *Avantaj:* Menzil sınırı yoktur; öndeki drone arkadaki drone'a köprü (bridge) görevi gördüğü müddetçe sürü dünyayı turlayabilir! ROS 2 DDS'in doğasına (P2P) eşsiz bir uyum sağlar.
+- **Donanım:** Yukarıda bahsedilen **Alfa Network** cihazları veya daha profesyonel askeri bant modülü olan **Doodle Labs Mesh Rider** donanımları takılır.
+- **Mantık:** Ağda bir yerleşik "Modem" yoktur. $10$ numaralı İHA, $5$ numaralı İHA üzerinden sekerek $1$ numaralı İHA'ya mesaj atabilir. İHA'ların bizzat kendileri o uçan uçağın bir yönlendiricisidir (BATMAN-adv protocol). 
+- *Avantaj:* Öndeki drone arkadaki drone'a repeater görevi gördüğü müddetçe sürü dünyayı turlayabilir! ROS 2 DDS'in doğasına en yatkın ağdır.
 
 ### 11.3. Uzun Mesafe İletişim (Long-Range Telemetry)
 Wi-Fi mesafeleri anten Gain'ine ($\mathrm{dBi}$) bağlı olarak maksimum $1$ ile $3 \mathrm{\ km}$ civarında tutulur. Eğer sistem askeri düzeyde bir arama kurtarma sürüsü ($10\mathrm{+} \mathrm{\ km}$) olarak kullanılacaksa standart Wi-Fi çipleri sökülüp özel RF modülasyonları eklenir:
