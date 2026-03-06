@@ -1,210 +1,295 @@
-# Sürü İHA (Swarm Drone Control) Kapsamlı Sistem ve Algoritma Dokümantasyonu
+# Sürü İHA (Swarm Drone Control) Kapsamlı Sistem, Mimari ve Matematiksel Modeller Dokümantasyonu
 
-Bu belge, **ROS 2** ve **PX4 Framework (MAVLink/MAVROS)** üzerine inşa edilmiş `swarm_drone_control` paketinin detaylı uçuş mekaniklerini, matematiksel modellerini, kod organizasyonunu ve algoritmik yapısını içermektedir. Proje, çoklu İHA sistemlerinin formasyon halinde hareket etmesi, birbirleriyle otonom şekilde organize olması ve çarpışma/enkaz sorunlarından kaçınmasını hedeflemektedir.
+Bu belge, **ROS 2 (Robot Operating System 2)** ve **PX4 Framework (MAVLink/MAVROS ve uORB/DDS)** üzerine inşa edilmiş `swarm_drone_control` paketinin uçtan uca çalışmasını anlatan **kapsamlı mühendislik ve teorik altyapı** referansıdır.
 
----
-
-## İçindekiler
-1. [Sisteme Genel Bakış](#1-sisteme-genel-bakış)
-2. [Sistem Mimarisi ve Dizin Yapısı](#2-sistem-mimarisi-ve-dizin-yapısı)
-3. [Matematiksel Teori ve Formasyon Algoritmaları](#3-matematiksel-teori-ve-formasyon-algoritmaları)
-    - 3.1. WGS84 Coğrafi Koordinat Sistemi ve Mesafe İşlemleri
-    - 3.2. Sürünün Ağırlık Merkezi (Center of Gravity - CoG)
-    - 3.3. Doğrultu (Bearing) Çıkarımı
-    - 3.4. Formasyon Rotasyonu Algoritması (Formation Rotation)
-    - 3.5. Oransal Hız Kontrolü (P-Controller Velocity Clamping)
-4. [Bellek Güvenliği ve `WaypointManager` Mimarisi](#4-bellek-güvenliği-ve-waypointmanager-mimarisi)
-5. `SwarmMemberPathPlanner` State Machine Akışı
-    - 5.1. FORMATIONAL_TAKEOFF
-    - 5.2. FORMATIONAL_ROTATION
-    - 5.3. GOTO_POSITION
-6. [Kapsamlı Kullanım Kılavuzu (Usage Guide)](#6-kapsamlı-kullanım-kılavuzu-usage-guide)
-7. [API ve Fonksiyon Referansları](#7-api-ve-fonksiyon-referansları)
+Bu döküman, projenin matematiksel altyapısını, otonom seyir logaritmasını (navigation log), güvenlik katmanlarını ve sistemin asenkron çalışma prensiplerini detaylandırmaktadır. Projenin ana hedefi, bir "Sürü" (Swarm) topolojisindeki İHA'ların ortak bir uçuş planını çarpışmadan (collision avoidance), asgari ağ gecikmesiyle (minimum latency) ve WGS84 uzamsal modeline uygun bir şekilde tamamlamasıdır.
 
 ---
 
-## 1. Sisteme Genel Bakış
+## İçindekiler Tablosu
 
-Çoklu İHA (Swarm UAV) sistemlerinde temel problem, her bir birimin asenkron karar verirken senkronize bir bütün (sürü) gibi hareket edebilmesidir. Bu paket, merkezi bir uçuş bilgisayarından ziyade, her İHA'nın kendi **ROS 2 Lifecycle Node**'u üzerinden çevresindeki birimlerin (`NeighborsInfo`) koordinatlarını alıp kendi rotasını otonom olarak çizdiği dağıtık bir (distributed) mimari sunar.
-
-**Temel Yetenekler:**
-- **Merkeziyetsiz Planlama:** Her drone kendi vektörel hesaplamasını gerçekleştirir.
-- **Hafıza Güvenliği:** Doğrusal hedeflerde `Segmentation Fault` gibi çökmeleri engelleyen özel *Linked List* varyantı veri yapıları kullanır.
-- **Dinamik Coğrafi Rotasyon:** Sürü, bir hedefe yöneldiğinde formasyonunun geometrisini bozmadan kütle merkezinden (CoG) o hedefe doğru komple bir dönüş sağlar.
+1. [Sisteme Genel Bakış ve Problemin Tanımı](#1-sisteme-genel-bakış-ve-problemin-tanımı)
+2. [Sistem Mimarisi, Dizin Yapısı ve Modülerlik](#2-sistem-mimarisi-dizin-yapısı-ve-modülerlik)
+   - 2.1. Dağıtık ve Merkeziyetsiz Mimari
+   - 2.2. Dizin Organizasyonu
+3. [ROS 2 Lifecycle ve State Machine Dinamikleri](#3-ros-2-lifecycle-ve-state-machine-dinamikleri)
+   - 3.1. Düğüm Evreleri (Node Transitions)
+   - 3.2. Görev-Durum (Mission State) Makinesi
+4. [Teorik Altyapı ve Matematiksel Algoritmalar](#4-teorik-altyapı-ve-matematiksel-algoritmalar)
+   - 4.1. WGS84 Coğrafi Koordinat Modelleri
+   - 4.2. Mesafe Belirleme (Haversine Formula)
+   - 4.3. Mutlak Doğrultu (Absolute Bearing) Çıkarımı
+   - 4.4. Ağırlık Merkezi (Center of Gravity - CoG) Yaklaşımı
+   - 4.5. Hedef Rotasyon Algoritması ve Geometrik İzdüşüm
+   - 4.6. Euler/Quaternion Dönüşüm Teorisi
+5. [Oransal (PID) Hız Kontrolü Katmanı](#5-oransal-pid-hız-kontrolü-katmanı)
+   - 5.1. Continuous Time vs Discrete Time Karşılaştırması
+   - 5.2. Hata (Error) Çıkarımı ve Clamping Limits
+6. [Bellek Yönetimi ve `WaypointManager` Mimarisi](#6-bellek-yönetimi-ve-waypointmanager-mimarisi)
+   - 6.1. Sorun: Vektör İndeks Çökmeleri (Segmentation Faults)
+   - 6.2. Çözüm: Bağlı Liste (Linked List) Felsefesi ve Failsafe
+7. [Çarpışma Önleme (Collision Avoidance) Mimarisi](#7-çarpışma-önleme-collision-avoidance-mimarisi)
+8. [ROS 2 QoS, DDS ve Haberleşme Modeli](#8-ros-2-qos-dds-ve-haberleşme-modeli)
+9. [Kod İçi API ve Fonksiyon Referansları](#9-kod-içi-api-ve-fonksiyon-referansları)
+   - 9.1. `autonomus_utils.hpp` Çekirdek İşlevleri
+   - 9.2. `geographic.hpp` Yardımcıları
+10. [Adım Adım Kurulum ve Kullanım Kılavuzu](#10-adım-adım-kurulum-ve-kullanım-kılavuzu)
+    - 10.1. Gereksinimler ve Bağımlılıklar
+    - 10.2. Build İşlemleri
+    - 10.3. Çalıştırma Parametreleri
+    - 10.4. ROS Topic Haritası
 
 ---
 
-## 2. Sistem Mimarisi ve Dizin Yapısı
+## 1. Sisteme Genel Bakış ve Problemin Tanımı
 
-Modüler refactoring süreci sonrası `swarm_drone_control` paketindeki dizin sistemi ve görevleri tamamen izole edilmiştir.
+Birden çok İnsansız Hava Aracının dar veya geniş alanlarda ortak bir vizyon doğrultusunda uçması (Swarm Robotics), modern havacılığın en kompleks algoritmik problemlerinden biridir. Geleneksel sistemler "Master/Slave" bağımlılığı üzerinden çalışır. Yani yerdeki veya gökyüzündeki bir merkez bilgisayar ağdaki her bir drone'a ne yapması gerektiğini dikte eder. Ancak bu tasarımın en büyük handikabı, merkezdeki ünitenin haberleşmeyi kaybetmesi veya düşmesi durumunda tüm sürünün de felç geçirmesidir.
 
-* `src/autonomus/`: Otonom görev durumlarını (Takeoff, Rotation, GoTo) yürüten ve Lifecycle üzerine oturan ana beyin kısmı.
-* `include/calculations/`: Haversine formülleri, bearing matematiği (`geographic.hpp`) ve uzamsal Euler operasyonlarını (`spatial.hpp`) barındıran kütüphane.
-* `src/communication/`: Sürüdeki diğer dronların telemetri/durum paylaşımlarının sağlandığı iç-iletişim node'ları.
-* `autonomus_utils.hpp`: Matematiksel verileri anlamlı sistem listelerine dönüştüren ve güvenliğini sağlayan fonksiyon blokları.
+**Çözüm:** `swarm_drone_control` paketinin otonom seyir modülü olan `SwarmMemberPathPlanner`, **merkeziyetsiz (decentralized)** bir formasyon geometrisi uygular. Her bir drone, uORB DDS (Data Distribution Service) köprüsü ile gelen `NeighborsInfo` (komşu bilgileri) topic'ini okur, formasyon içindeki kütle merkezini tespit eder ve etrafında dönerek rotasını dinamik bir vektörel tepki ile ayarlar. Böylece sistemden bir drone düşse bile diğerleri kendi ağırlık merkezlerini baştan asenkron hesaplayarak formasyonu anında onarabilir.
 
-Her `SwarmMemberPathPlanner` (Lifecycle) birimi;
-1. PX4'ten kendi durumunu (`VehicleGlobalPosition`, `VehicleAttitude`) çeker.
-2. Formasyondaki diğer dronların durumunu Subscripe eder (`NeighborsInfo`).
-3. PX4'e Hedef Hız Vektörünü (`TrajectorySetpoint`) basar.
+## 2. Sistem Mimarisi, Dizin Yapısı ve Modülerlik
+
+### 2.1. Dağıtık ve Merkeziyetsiz Mimari
+- **Node (Düğüm) Standardı:** Sistemdeki her bir `SwarmMemberPathPlanner` bir `rclcpp_lifecycle::LifecycleNode` objesinden ürer.
+- **Micro-XRCE-DDS:** PX4 tabanlı iletişim standardına ayak uydurmak üzere ROS 2 Humble ile PX4 Firmware arasında köprüleme yapar.
+- **İzolasyon:** Her dronun kendi sistemi sadece "kendisinden" (`TrajectorySetpoint` basmak) ve dışarıdan aldığı komşu pozisyonlarından sorumludur.
+
+### 2.2. Dizin Organizasyonu
+Daha önce iç içe geçmiş olan spagetti kodu, profesyonel bir yapı standartına getirilmiştir:
+- `src/autonomus/`: Tüm temel kararlar bu dizinden çıkar. (Uçuş evreleri, timer'lar ve otonom tepkiler)
+- `include/calculations/`: Salt matematik fonksiyonları sınıfıdır (Haversine, Bearing, Euler to Quaternion).
+- `src/communication/`: DDS ve ağ problemleri, IP atamaları, port eşleştirmeleri ve komşu ağ protokollerini içerir.
 
 ---
 
-## 3. Matematiksel Teori ve Formasyon Algoritmaları
+## 3. ROS 2 Lifecycle ve State Machine Dinamikleri
 
-Uçuşun pürüzsüz çalışması büyük oranda `calculations/` kütüphanesindeki WGS84 küresel geometri modellerine ve trigonometrik hesaplamalara bağlıdır.
+### 3.1. Düğüm Evreleri (Node Transitions)
+Düğümler doğrudan uçuşa geçecek bir komut uygulamaz. Önce sistemin her bir sensörden veri alabildiğinden emin olması gerekir:
+1. **Unconfigured:** Başlangıç state'i. Hiçbir bellek tahsisi henüz gerçekleştirilmedi.
+2. **Inactive (Configured):** `on_configure` tetiklendi. Pointers tanımlandı, Waypoint serisi yüklendi ancak motorlara komut verilmiyor.
+3. **Active:** Sistem `on_activate` tetiklemesiyle uyanır. `state_cycle_callback` timer loop'u motorlara Hız verilerini gönderir. İHA Offboard (Otonom) moda geçer ve formasyona kalkar.
 
-### 3.1. WGS84 Coğrafi Koordinat Sistemi ve Mesafe İşlemleri
+### 3.2. Görev-Durum (Mission State) Makinesi
+Bir C++ `enum class Mission` ile sürünün hangi evrede olduğu 10 Milisaniyede ($100 Hz$) bir denetlenir.
 
-Dünya düz olmadığı için Descartes (X, Y) koordinat sistemlerini doğrudan kullanamayız. Projede Dünya'nın küresel geometrisi ele alınır (`Equatorial Radius, R = 6378137.0 m`). İki GPS noktası ($\phi_1, \lambda_1$) ve ($\phi_2, \lambda_2$) arasındaki mesafe **Haversine** formülüyle veya Vincenty algoritması ivmelendirilmiş hali ile hesaplanır:
+- `FORMATIONAL_TAKEOFF`: İHA'nın Z ekseninde havalanması ($e_z = z_{hedef} - z_{mevcut}$ formülüyle). Oransal kontolör ile pürüzsüzce kalkış yapar.
+- `FORMATIONAL_ROTATION`: Kütle merkezine göre formasyonun yönünü belirleme ve hedefe doğru dönmesi.
+- `GOTO_POSITION`: Dönüş bittikten sonra tam konuma teğetsel X-Y vektörel gidiş işlemi.
+- `DO_PROCESS` ve `END_TASK`: Görev noktasında bekleyip aksiyon alma veya sensör verisi depolama.
 
+---
+
+## 4. Teorik Altyapı ve Matematiksel Algoritmalar
+
+Bu başlık, `autonomus_utils.hpp` ve `calculations/` içerisinde kodlanmış olan tüm matematik formülleri ve coğrafi uzamsal işlemlerin çekirdek bilgisini içerir.
+
+### 4.1. WGS84 Coğrafi Koordinat Modelleri
+Dünya düz olmadığı için harita üzerindeki herhangi iki nokta arasındaki işlemi 2D Descartes koordinat sistemi ($X$, $Y$) ile yapmak büyük hata verir. Ekvator yarıçapının $R = 6378137.0\text{ m}$ olduğu bir küresel uzay olan **WGS84** projeksiyonu esastır. `VehicleGlobalPosition` nesnesindeki ($\phi: Latitude$, $\lambda: Longitude$) girdilerini kullanırız.
+
+### 4.2. Mesafe Belirleme (Haversine Formula)
+İki drone (iki WGS84 koordinat seti) arasındaki coğrafi mesafenin ölçümü radyan bazında alınır. ($\phi_1, \lambda_1$) ve ($\phi_2, \lambda_2$) nokta girdileri üzerinde;
+
+Hata miktarı tespiti:
 $$ \Delta\phi = \phi_2 - \phi_1 $$
 $$ \Delta\lambda = \lambda_2 - \lambda_1 $$
+
+Merkezi küre kiriş (chord) uzunluğunun karesi olan $a$ parametresi:
 $$ a = \sin^2\left(\frac{\Delta\phi}{2}\right) + \cos(\phi_1)\cos(\phi_2)\sin^2\left(\frac{\Delta\lambda}{2}\right) $$
+
+Küresel açı ve mesafe izdüşümü hesaplanması:
 $$ c = 2 \cdot \operatorname{atan2}\left(\sqrt{a}, \sqrt{1-a}\right) $$
 $$ d = R \cdot c $$
 
-Sistem bu sayede $\Delta Lat, \Delta Lon$ cinsi radyan hatalarını metre cinsine ($d_{lat\_meter}, d_{lon\_meter}$) doğru şekilde çevirir.
+Mesafe ($\text{distance } d$), metre (meters) cinsinden çıkartılır. `geo::calculate_distance<DLatDLon>` fonksiyonunun taban formulizasyonu budur.
 
-### 3.2. Sürünün Ağırlık Merkezi (Center of Gravity - CoG)
-
-Formasyon uçuşunun kilit noktası, otonom kararların dronun kendisine göre değil, sürünün kütle merkezine (CoG) göre alınmasıdır.
-
-Elimizde $N$ adet drone (komşular + ana drone) olduğunu varsayarsak, bu koordinatlar WGS84 üzerinden toplanıp ortalanır:
-
-$$ \text{CoG}_{\text{lat}} = \frac{1}{N} \sum_{i=1}^{N} \text{Lat}_i $$
-$$ \text{CoG}_{\text{lon}} = \frac{1}{N} \sum_{i=1}^{N} \text{Lon}_i $$
-
-Bu, algoritmada `geo::calculate_cog<VehicleGlobalPosition>(all_positions)` çağrısı aracılığıyla vektörel olarak anlık çözümlenir.
-
-### 3.3. Doğrultu (Bearing) Çıkarımı
-
-Kütle merkezinin (CoG) yönünün nereye dönmesi gerektiğini anlamak üzere başlangıç ($\phi_1, \lambda_1$) noktasından hedef ($\phi_2, \lambda_2$) noktasına giden okun mutlak açısı (kuzeye göre yönelim) çıkarılmalıdır:
+### 4.3. Mutlak Doğrultu (Absolute Bearing) Çıkarımı
+Drone formasyonunda, merkez birimlerin coğrafi kuzeye (True North) göre hangi açıyla (derece/radyan cinsinden) baktığını bulmamız gerekir. İki WGS84 noktasından türetilen Başlangıç yönelimi (Initial Bearing) formülü şöyledir:
 
 $$ \theta = \operatorname{atan2}\left( \sin(\Delta\lambda)\cos(\phi_2) , \cos(\phi_1)\sin(\phi_2) - \sin(\phi_1)\cos(\phi_2)\cos(\Delta\lambda) \right) $$
 
-### 3.4. Formasyon Rotasyonu Algoritması (Formation Rotation)
+Sonuç $\theta$ bir radyan cinsindendir ve $0$ Kuzey, $\pi/2$ Doğu, $\pm\pi$ Güney, $-\pi/2$ Batı'ya karşılık gelir.
 
-Drone'lar sadece hedefe doğru dümdüz uçmazlar; önce kütle merkezleri etrafında (gezegenin güneş etrafında dönmesi gibi) hedefe doğru **yönelerek (Bearing matching)** kendi hizalarını korurlar.
+### 4.4. Ağırlık Merkezi (Center of Gravity - CoG) Yaklaşımı
+Ağırlık merkezi formasyonda "sürünün görünmez beyni/çekirdeği"dir. Topolojik bir hesapla sürüdeki tüm İHA'ların nokta bulutları ortalanarak bu sanal nokta yaratılır. Kod içerisindeki iteratif fonksiyon şudur:
 
-1. **Hedef ve En Yakın Araç Açısı Bulunur:** 
-   O an sürüde hedefe **en yakın** (Nearest) aracın CoG'a olan açısı ile, CoG'dan **Hedefe (Target)** olan açık karşılaştırılır. Sürünün dönmesi gereken miktar:
-   
-   $$ \theta_{\text{rotasyon}} = \text{WrapAngleToPi}(\theta_{\text{CoG} \to \text{Target}} - \theta_{\text{CoG} \to \text{Nearest}}) $$
+ELİNDEKİ SÜRÜDEKİ DRONELERI KOORDİNASYON AŞAMASI:
+$$ \text{CoG}_{\text{lat}} = \frac{1}{N} \sum_{i=1}^{N} \text{Lat}_i \quad , \quad \text{CoG}_{\text{lon}} = \frac{1}{N} \sum_{i=1}^{N} \text{Lon}_i \quad (N = \text{Tüm Drone Sayısı}) $$
 
-2. **Dronun Daire Üzerindeki Yeni Yeri (Circular Position):**
-   Mevcut drone'un (THIS DRONE) CoG etrafındaki kendi standart açısı bulunur:
-   $$ \theta_{\text{kendi\_açım}} = \theta_{\text{CoG} \to \text{O anki Konum}} $$
-   Drone'un hedefe bakması için gitmesi gereken yeni açı formülüze edilir:
-   $$ \theta_{\text{yeni\_hedef}} = \text{WrapAngleToPi}(\theta_{\text{kendi\_açım}} + \theta_{\text{rotasyon}}) $$
+`geo::calculate_cog<VehicleGlobalPosition>(all_positions)` ile çağırılır.
 
-3. **İleri Projeksiyon (Forward Geolocation):**
-   CoG noktasından başlanıp yeni açı yönü ($\theta_{\text{yeni\_hedef}}$) ve yarıçap mesafesinde (radius) ileriye atılarak yeni konum tespit edilir:
-   $$ \phi_{\text{yeni}} = \arcsin\left(\sin(\phi_{\text{CoG}})\cos(\delta) + \cos(\phi_{\text{CoG}})\sin(\delta)\cos(\theta_{\text{yeni\_hedef}})\right) $$
-   *(Burada $\delta = \text{Mesafe} / R$)*
+### 4.5. Hedef Rotasyon Algoritması ve Geometrik İzdüşüm
+Formasyonun yüzünü hedefe dönmesini sağlayan **Formasyon Döndürme** mekanizması şu kurallarla ardışık hesaplanır:
 
-Sırasıyla `calculate_target_bearing_for_drone` ve `calculate_new_point` mekanizması matematiksel olarak bunu otonom işletir.
+1. **Önce mevcut sapmayı bul (Formation Error):**
+   $$ \theta_{\text{rotasyon}} = \text{WrapAngleToPi}(\theta_{\text{CoG} \to \text{Target}} - \theta_{\text{CoG} \to \text{Nearest-Drone}}) $$
+   Bu $\theta_{\text{rotasyon}}$, tüm dairesel formasyonun kendi ekseninde "ne kadar" açıyla, "nereye" dönmesi gerektiğini barındırır.
 
-### 3.5. Oransal Hız Kontrolü (P-Controller Velocity Clamping)
+2. **Dronun Dairedeki Yeni Hedef Açısı (New Node Circular Degree):**
+   Benim drone'um (THIS) şu anki kütle merkezinden kaç derecede duruyor? Formasyon tamamen döndüğünde, benim aracıma düşen yeni açısal sapma payı ve teğet koordinatı şöyledir:
+   $$ \theta_{\text{kendi-acim}} = \theta_{\text{CoG} \to \text{Mevcut-Pozisyon}} $$
+   $$ \theta_{\text{yeni-hedef}} = \text{WrapAngleToPi}(\theta_{\text{kendi-acim}} + \theta_{\text{rotasyon}}) $$
+   Açıların $+\pi$ ile $-\pi$ arasında kalması için `WrapAngleToPi` bir çark görevi görür ve trigonometrik hataları $\sin, \cos, \tan$ fonksiyon grafiğinden aşmasına müsaade etmez. 
 
-Yeni nokta veya rota hesaplandıktan sonra drone anında ışınlanamayacağı için, aradaki farktan (error) bir PID-orantılı hız dizgesi çıkarılır.
+3. **Uzamsal Projeksiyon:**
+   Sanal konumun ($\theta_{\text{yeni-hedef}}$  doğrultusunda $\delta$ metre ilerisinin) CoG'a uygulanması ile yeni GPS hedefleri çıkartılır:
+   $$ \phi_{\text{yeni}} = \arcsin\left(\sin(\phi_{\text{CoG}})\cos(\delta) + \cos(\phi_{\text{CoG}})\sin(\delta)\cos(\theta_{\text{yeni-hedef}})\right) $$
 
-$$ Hata (e) = Konum_{istenen} - Konum_{mevcut} $$
-$$ V_{\text{hesaplanan}} = e \times K_p $$
-$$ V_{\text{son_hız}} = \max\left(-V_{\text{max\_limit}}, \min(V_{\text{hesaplanan}}, V_{\text{max\_limit}})\right) $$
+Bu denklemde radyal $\delta$, mesafe/Yer Yarıçapı `d / R` denklemiyle standardize edilmiştir.
 
-`autonomus_utils::calculate_velocity<double>(error, desired_vel)` fonksiyonu yardımıyla güvenli maksimum hızı asla aşmayan (*clamped*) pürüzsüz hızlanma (smooth transition) verileri PX4'e (`TrajectorySetpoint.velocity`) itilir.
+### 4.6. Euler/Quaternion Dönüşüm Teorisi
+Dronun fiziksel yalpalaması (Attitude data), PX4'ten Quaternion (`[q_0, q_1, q_2, q_3]`) veya Quaternion struct'ı olarak gelir. Çarpışma algılayıcılar veya formasyon hesabı bu veriyi anlayabilmek için bir fonksiyonla Gimbal kilitlenmesi yaşamayacağı tarzda `Roll`, `Pitch` ve `Yaw` verilerine döker (`spatial.hpp` içerisinde barınır). Dronun yüzü kuzeye ($\theta = 0$ radyan) doğru döndükçe otonomi sistemi hedefe vardığını onaylar.
 
 ---
 
-## 4. Bellek Güvenliği ve `WaypointManager` Mimarisi
+## 5. Oransal (PID) Hız Kontrolü Katmanı
 
-C++ tabanlı kontrol sistemlerinde yaşanan en büyük sorunlardan biri, `std::vector` gibi yapıların dışına çıkılması sonucu tetiklenen **Segmentation Fault (Çökme)** hatalarıdır.
+Dönüşümü bulduk. Peki oraya nasıl gideceğiz? Eski nesil sistemlerde direkt "Konuma Işınlanma" komutu verilir ancak bu kontrolcü sapmasına (drift) sebep olur. Bu yazılım hız tabanlı kapalı çevrim kontrolcü `Offboard` modu olan `TrajectorySetpoint` dizgilerini kurgular. Temel olarak bir **P-Controller (Oransal Kontrolör)** çalıştırılır.
 
-Önceki tasarımlarda hedefler statik index dizileri `i_curr_wp_` ile okunuyordu. Bu indeksin boyutu geçmesi yazılım çökmesine, drone'un ise olduğu yerde donmasına ya da irtifa kaybetmesine yol açar.
-**Çözüm:** `autonomus_utils.hpp` içerisinde **`WaypointManager`** class'i oluşturuldu.
+### 5.1. Continuous Time vs Discrete Time Karşılaştırması
+Sistem $10$ ms frekansta ($100$ Hz) iterasyon yaptığı için hesaplamalar Ayrık Zamanlı (Discrete) matematik formlarına dökülmüştür. Oransal kazanç $K_p$, sabit `P_GAIN = 0.5f` şeklindedir.
+
+### 5.2. Hata (Error) Çıkarımı ve Clamping Limits
+Diyelim ki drone'un varış X vektörü $20$ metre ileride. $e = 20$. 
+İstenilen hız $= 20 \times 0.5 = 10 \text{ m/s}$. 
+Ancak İHA'nın rüzgarda takla atmaması için hızına bir limit verilir. `autonomus_utils::calculate_velocity<T>` bu formülü çalıştırır:
+$$ V_{\text{cikis}} = \operatorname{clamp}(e \times K_p, \quad -V_{\text{max-hiz}}, \quad V_{\text{max-hiz}}) $$
+Sonuç: Limit $2.0 \text{ m/s}$ ise sistem $2.0 \text{ m/s}$ döndürür, drone konuma yaklaştıkça (*Mesela* $e=2$) hız pürüzsüz biçimde asimptotik olarak yavaşlamaya (Smooth deceleration) başlar. ($e \times K_p = 2 \times 0.5 = 1.0 \text{ m/s}$).
+
+---
+
+## 6. Bellek Yönetimi ve `WaypointManager` Mimarisi
+
+C++ dili güçlüdür ancak bellek taşması (Buffer Overflow) ve belirsiz işaretçi (Dangling Pointer) hatalarına fazlasıyla meyillidir.
+
+### 6.1. Sorun: Vektör İndeks Çökmeleri (Segmentation Faults)
+Pek çok yazılımda drone hedefleri `std::vector` içinde toplanır. Drone hedefe vardığında `i_curr_wp_` integer'ı arttırılır (`i_curr_wp_ += 1;`). Hedef dizisi 5 tane ise ve araç ardı ardına 6 konuma gitmeye denerse, C++ `std::vector[6]` bellek alanına bakarak yetkisiz erişim başlatır. Bu; programı anında çökertir (Segfault) ve ROS node düşer. Sonuç: Cihaz havada kontrolden çıkar.
+
+### 6.2. Çözüm: Bağlı Liste (Linked List) Felsefesi ve Failsafe
+`autonomus_utils.hpp` içerisine kurulan **`WaypointManager`** class'i ile bellek yönetimi dış dünyaya kapalı, Failsafe garantili bir kapsüllemeye (Encapsulation) oturtuldu.
 
 **Özellikleri:**
-- Dışarıdan hedefler `set_waypoints()` arayüzü ile eklenir.
-- Liste boyutu her sorguda (`current_index_ < waypoints_.size()`) kontrol edilir.
-- `waypoint_manager_.current()` komutu; o anki hedefin pointer'ını döndürür. Eğer liste bitmişse `nullptr` döndürerek sonsuz döngü veya bellek sızıntısını keser.
-- Görev bittiğinde veya tetiklendiğinde `waypoint_manager_.next()` çağrılarak internal index bir (1) arttırılır ve yeni birim döndürülür.
+- Sisteme hedefler `set_waypoints()` arayüzü ile eklenir. `current_index_{0}` initialize edilir.
+- Bir C/C++ yapısında boyutu `(size_t)` hesaplayarak array check uygular (`current_index_ < static_cast<int>(wp_msg_->waypoints.size())`).
+- **Okuma/Getirme:** `waypoint_manager_.current()` komutu; o anki waypoint yapısının adres pointer'ını döndürür. Eğer liste geçersizleşirse veya bitmişse `nullptr` döndürerek sonsuz döngü veya bellek okuma sızıntısını kapatır.
+- İlgili hedef tamamlandığında (`autonomus_missions.cpp` adım atladığında) `waypoint_manager_.next()` çağrılarak internal index bir birim iterasyon yaptırılır ve güvenle bir sonraki veriye kayılır.
 
+Örnek güvenli okuma:
 ```cpp
 const auto wp = waypoint_manager_.current();
-if (!wp) return; // Hedef bittiyse crash yerine güvenli çıkış yap
-// Güvenli pointer kullanımı: 
+if (!wp) return; // wp boş (nullptr) ise alttaki kodlar hiç çalışma
 double z_error = current_altitude + wp->alt;
 ```
 
 ---
 
-## 5. `SwarmMemberPathPlanner` State Machine Akışı
+## 7. Çarpışma Önleme (Collision Avoidance) Mimarisi
 
-Robotikte "Durum Makinesi" (State Machine) çok yaygındır. Ana algoritma `autonomus_missions.cpp` içerisinde Enum yapısıyla tutulur ve bir Lifecycle timer loop ($10$ ms - $100$ Hz) içerisinde akıcı tepki verir.
+Dronlar rotasyondan çıkıp `GOTO_POSITION`'da hedefe uçarken, sensörlerin veya komşu telemetrilerin (NeighborsInfo DDS) algıladığı objeler, bir potansiyel enerji alanı (Artificial Potential Field Vector) yaratacak şekilde hesaplanır:
 
-### 5.1. FORMATIONAL_TAKEOFF (Formasyon Kalkışı)
-- Her bir drone, `target_altitude_` (Varsayılan `-10.0` m) parametresini okur. 
-- İrtifa hatası (`z_error = current_altitude + wp->alt;`) ölçülür ve yukarıya doğru dikey `z_vel` kontrolcüsü çalışır.
-- Drone istenilen irtifaya varınca ($\text{error} < 0.01\text{m}$), **`NeighborVerification`** fonksiyonunu bekler. Bu fonksiyon sayesinde **tüm sürünün o irtifaya ulaşması** beklenir ki bir drone rotasyona geçerken diğeri altta kalıp çarpışmasın (Senkronizasyon kilidi).
-
-### 5.2. FORMATIONAL_ROTATION (Formasyon Dönüşü)
-- Tüm takım havalandığında rota belirleme aşaması başlar. 
-- Drone, [bölüm 3.4](#34-formasyon-rotasyonu-algoritması-formation-rotation)'te açıklanan matematiksel işlemlerle yeni konumunu hesaplar (`swarm_positions.circular_position`).
-- Yanal (Latitudinal) ve Dikey (Longitudinal) mesafeler `dlat_meter` ve `dlon_meter` cinsinden hıza ($V_x, V_y$) dönüştürülür ve rotasyon başlar.
-- O konuma gelindiğinde ROS 2 Service çağrısı (`InTarget`) gönderilerek, "Ben yerimi aldım" denir. Diğerleri de döndüyse sonraki adıma atlanır.
-
-### 5.3. GOTO_POSITION (Konuma İlerleme)
-- Tüm formasyon yüzünü hedefe (Waypoint) döndükten sonra kütlece ilerlenir.
-- Drone'un hızları `current_commands.v_lat` ve `current_commands.v_lon` olarak hesaplanır.
-- Ayrıca bu adımda araca **`collision_bias`** (Çarpışma Engelleme İtme Vektörü) dahil edilir (Örn: `v_lat += collision_bias.vlat`). Ortamda algılanan yabancı cisimler itki vektörüyle sürünün içine ek kuvvet basar.
+1. Başlangıçta hedefe giden teorik X ve Y hızları bulunur. ($V_{\text{hedef-lat}}$, $V_{\text{hedef-lon}}$)
+2. Çarpışma riski taşıyan bir obje yaklaşmaktaysa, o objenin dronumuz üzerinde itici bir kuvvet vektörü (`collision_bias.vlat` , `.vlon`) yarattığı fiziki model işleme koyulur.
+3. Drone, iki hız vektörünü üst üste toplar (Superposition Model):
+   $$ V_{\text{son-x}} = V_{\text{hedef-lat}} + Bias_{\text{carpisma-x}} $$
+   $$ V_{\text{son-y}} = V_{\text{hedef-lon}} + Bias_{\text{carpisma-y}} $$
+Böylece drone objeden teğet kaçarak yumuşak bir yörünge çizer ve hedef noktasına ulaşmadan önce "sekter" eylemi gerçekleştirmiş olur.
 
 ---
 
-## 6. Kapsamlı Kullanım Kılavuzu (Usage Guide)
+## 8. ROS 2 QoS, DDS ve Haberleşme Modeli
 
-### Gereksinimler
-- **Ubuntu 22.04 LTS** ve **ROS 2 Humble**
-- PX4 Autopilot (Simulation - gazebo-classic/ignition veya Hardware)
-- `px4_msgs` sürüm uyumunun sağlanması (U-XRCE-DDS)
+Havada sinyalin kopma ihtimali çok yüksektir. TCP protokolündeki veri doğrulama istekleri bu sebeple robotikte ciddi gecikmelere (Latency Lag) sebep olur. UDP tabanlı DDS (Data Distribution Service) **Reliability QoS** parametreleri ile şekillendirilir.
 
-### Derleme
-Sadece sürü kontrol modülünün derlenip test edilmesi için Workspace kök dizininde (`~/ws_offboard_control/`):
+Düğüm (Node) arası ve FCU (PX4 U-XRCE-DDS Micro) arası mesajlar (`NeighborsInfo`, `TrajectorySetpoint`):
+- `Best Effort`: Mesaj yolla ama gelip gelmediği kontrolü sormama, doğrudan ağa fırlat.
+- `Volatile`: Son gelen mesajı saklama, yeni gelene adapte ol.
+- Prensibiyle kodlanmıştır, sürünün iletişimde kalitesizlik olsa bile kilitlenmelere sebebiyet vermez.
+
+---
+
+## 9. Kod İçi API ve Fonksiyon Referansları
+
+Bu paketi devralan veya birleştirmek isteyen robotik/yazılım geliştiriciler için temel API ve Helper C++ sınıfları:
+
+### 9.1. `autonomus_utils.hpp` Çekirdek İşlevleri
+
+| Fonksiyon/Struktür Adı | Kullanım Çerçevesi | Görevi / Özelliği | Dönüş Tipi |
+|------------------------|--------------------|-------------------|------------|
+| `WaypointManager::current()` | Otonom Akış Çekirdeği | O anki (Memory Safe) WP pointer'ini verir. Sistem bitmişse `nullptr`. | `const VehicleGlobalPosition*` |
+| `WaypointManager::next()` | Görev Geçişleri | İndeksi güvenle ($N < size$) artırır ve sonraki WP'yi pointer olarak iterasyonla verir. | `const VehicleGlobalPosition*` |
+| `combine_positions` | Kütle Merkezi Grubu | Kendisi dahil komşuları DDS üzerinden okuyarak tek `array`/`list` haline sarmalar. | `std::vector<VehicleGlobalPosition>` |
+| `calculate_target_bearing_for_drone`| Rotasyon Algoritması | Tüm komşu araçların yüzey alanındaki CoG tabanlı açı yönlemesini ve dönüş rotasını kurgular. | `double` (Radyan) |
+| `find_nearest_vehicle_to_target` | Geometrik Kıyas | Sürü içerisinden hedefe kuş uçuşu en yakın olan drone referansını diziden seçer. | `VehicleGlobalPosition` |
+| `calculate_velocity<T>` | Hız Kontrolü | PID algoritması çalıştırır ve ebatları `T` sınırları dışına (clamping threshold) taşan hataları keser. | `template T` (Örn. double) |
+| `NeighborVerification` | Lambda Koşul Sorgusu | Tüm sürünün `LAMBDA` tabanlı şarta uyup uymadığını (`std::all_of`) kontrol ederek formasyon lock koyar. | `bool` |
+
+### 9.2. `geographic.hpp` Yardımcıları
+
+| Fonksiyon Adı | Kayıtlı Olduğu Kütüphane | Görevi / Özelliği | Matematik Formülü | Dönüş Tipi |
+|---------------|--------------------------|-------------------|-------------------|------------|
+| `geo::calculate_distance` | `<geographic.hpp>` | WGSGPS İki Veri Arası Doğrusal Metre ve Radyal Mesafesi. | Haversine Formula | `DLatDLon (Struct)` |
+| `geo::calculate_bearing` | `<geographic.hpp>` | İki WGS noktası arası True North Yöneliş Açısını hesaplar. | ArcTangent Bear. | `double` |
+| `geo::calculate_cog` | `<geographic.hpp>` | Sürünün Kütle Ağırlık Merkezi (Center of Globus). | Average Pointing | `VehicleGlobalPosition` |
+| `spatial::WrapAngleToPi` | `<spatial.hpp>` | Yüksek açı ve Euler problemlerini -$\pi$ / +$\pi$ arasına izomerleştirir. | $f(\theta)$ wrap | `double` |
+| `geo::calculate_offsets` | `<geographic.hpp>` | Merkezden İleri ve Yan mesafelerle yeni GPS üretimi. | WGS Inverse. | `std::vector<WP>` |
+
+---
+
+## 10. Adım Adım Kurulum ve Kullanım Kılavuzu
+
+Projenin kendi bilgisayarınızda bir GCS (Ground Control Station), donanım drone veya SITL ortamında başlatılması için izlenmesi gereken yörünge.
+
+### 10.1. Gereksinimler ve Bağımlılıklar
+Paket spesifik sistem bileşenleriyle inşa edilmiştir:
+- **Ubuntu 22.04 LTS (Jammy)** İşletim Sistemi.
+- **ROS 2 Humble Hawksbill** (Full Desktop Installation önerilir).
+- **PX4-Autopilot** Toolchain: PX4'ün `px4_msgs` veri formlarıyla derlenebilmesi gerekir.
+- **Micro XRCE-DDS Agent**: FCU (Flight Controller Unit) DDS bağlantısı için ara port arayüzüdür (FastDDS ile koordine çalışır).
+
+### 10.2. Build İşlemleri
+Projenin tamamen kurulabilmesi veya sadece modüllerinin temizlenip (`clean`) inşa (`build`) edilebilmesi için Workspace kök dizinine geçilerek aşağıdaki işlemler yapılır:
+
 ```bash
+cd ~/ws_offboard_control
+# Bağımlılıkları kontrol etme
+rosdep install --from-paths src --ignore-src -r -y
+
+# Yalnızca Otonomi Paketini (ve symlinkleri, Python senaryoları için) Derleme
 colcon build --packages-select swarm_drone_control --symlink-install
-```
-*Environment sourcing:* `source install/setup.bash`
 
-### Uygulamanın Başlatılması ve Parametreler
-Lifecycle Node olduğu için standart Lifecycle yayıncısı ile tetiklenebilir ya da `ros2 run` kullanılarak konfigürasyon yapılabilir. Sistem, hedefe uçmak için `target_altitude_` parametresi ve `target_lat`, `target_lon` gibi ROS paramlarına sahiptir.
+# Yeni kurulan ROS paket sistemini Environment'e geçirme
+source install/setup.bash
+```
+
+*(Önemli Not:* `px4_msgs` kütüphanesi yüklü değilse, öncesinde PX4 bağımlılıklarının veya `colcon build --packages-select px4_msgs` komutunun verilmiş olduğundan emin olunuz.)*
+
+### 10.3. Çalıştırma Parametreleri
+İlgili Lifecycle konseptli node'un parametrelerle ayaklandırılması komutu:
 
 ```bash
-ros2 run swarm_drone_control autonomus_main_node --ros-args -p sys_id:=1 -p target_lat:=47.398000 -p target_lon:=8.546000 -p target_alt:=-15.0
+ros2 run swarm_drone_control autonomus_main_node \
+  --ros-args \
+  -p sys_id:=1 \
+  -p target_lat:=47.398000 \
+  -p target_lon:=8.546000 \
+  -p target_alt:=-15.0
 ```
 
-*Not:* Yükseklik (`alt`) değerleri PX4 dünyasında **NED (North-East-Down)** referansından dolayı yeryüzünün üstüne çıkıldıkça **negatif** (Örn: Havada 10m = `-10.0`) değer almaktadır! 
+- `-p sys_id:=X`: Her node'a MAVLink Target üzerinden kimlik numarası (SYSID) atar. Çakışma durumunda komutlar ulaşmaz.
+- `-p target_alt:=-15.0`: Sistemin hedef (Z eksen) yüksekliğidir. Otonomi sistemi **NED (North-East-Down)** standardına tabidir, yerin yukarısı **Negatif ($\mathbf{-Z}$)** değerindedir. Örneğin $20 \text{ metre}$ uçuç, `-20.0` anlamına gelir. Aksi istenirse drone yerin içine (`+Z`) çakılmaya çalışacaktır.
 
-### Yayınlanan Topic ve Servisler (Topic and Service Interfaces)
-- **`fmu/in/trajectory_setpoint`**: İHA'ya hızın/koordinatın basıldığı PX4 DDS konusu.
-- **`/in_position`**: Dronun hedefte olduğunu senkronizeleyen Service (Client/Server).
-- **`neighbors_info`**: (Özel Arayüz) Kendi ID'niz dışındaki diğer sistemlerin pozisyon ve durumunu çekmek için.
+Sistem Lifecycle uyumlu olduğu için Terminal'den yayınlandıktan sonra `[Unconfigured]` uyku modunda sistem kontrollerinin açılmasını bekler. Aktifleştirmek için harici bir ros2 lifecycle komutu kullanılmalıdır (*örneğin* `ros2 lifecycle set /swarm_member_path_planner configure`).
 
----
-
-## 7. API ve Fonksiyon Referansları
-
-Bu paketi sonradan devralan veya birleştirmek isteyen geliştiriciler için temel API tabloları:
-
-| Fonksiyon Adı | Kaynak (Dosya) | Görevi / Özelliği | Dönüş Tipi |
-|---------------|----------------|-------------------|------------|
-| `WaypointManager::current()` | `autonomus_utils.hpp` | O anki WP pointer'ini verir (Failsafe). | `const VehicleGlobalPosition*` |
-| `WaypointManager::next()` | `autonomus_utils.hpp` | İndeksi artırır ve sonraki WP'yi verir. | `const VehicleGlobalPosition*` |
-| `calculate_target_bearing_for_drone`| `autonomus_utils.hpp` | CoG ve Nearest tabanlı formasyon açısı bulur | `double` (Radyan) |
-| `calculate_velocity<T>` | `autonomus_utils.hpp` | PID algoritması ve Clamping çalıştırır. | `template T` |
-| `geo::calculate_distance` | `geographic.hpp` | İki GPS verisi (WGS84) arası metrik mesafe ölçer. | `DLatDLon (Struct)` |
-| `spatial::WrapAngleToPi` | `spatial.hpp` | Açıyı $-\pi$ ile $+\pi$ sınırlarına bastırır. | `double` |
-| `formational_takeoff()` | `autonomus_missions.cpp` | Güvenli senkronize kalkış state komutlarıdır. | `void` |
+### 10.4. ROS Topic Haritası Modeli
+- `[Kapsülleyen]` YAYIN Topics (Publisher):
+  - `fmu/in/trajectory_setpoint`: Düşük gecikmeli XYZ Offboard Motor Hızlarını DDS üzerinden PX4'e basar.
+  - `/in_position`: Servis mimarisidir. İki drone arası "Döndüm, pozisyon aldım" kilitlemesinde server sunuculuğu yapar.
+- `[Kapsüllenen]` ABONELİK Topics (Subscriber):
+  - `fmu/out/vehicle_local_position` veya `/global_position`: PX4 tarafından basılan İHA durumu.
+  - `fmu/out/vehicle_attitude`: Quaternion olarak drone'un açılımsal yalpalama bilgileri.
+  - `neighbors_info`: (Bağımsız özel arayüz) Yakınlardaki sürünün `lat/lon` kimlik haritası, kendi otonomisine veri sağlaması.
 
 ---
 
-*Geliştirme, Bakım ve Matematik Modellemesi: `swarm_drone_control` Development Core - Mart 2026*
+*Geliştirme, Bakım, Optimizasyon ve Matematik Modellemesi:*
+*Bu README dosyası, **`swarm_drone_control`** sisteminin algoritma standardizasyonu amacıyla Semih'in revizeleri sonrası çekirdek dokümantasyonu olarak M. O. yapay zeka entegrasyonu ile (2026 versiyon) derlenmiştir.*
