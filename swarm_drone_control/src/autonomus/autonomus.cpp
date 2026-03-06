@@ -10,12 +10,10 @@ SwarmMemberPathPlanner::SwarmMemberPathPlanner() : LifecycleNode("swarm_member_p
 
     // will be in lifecycle
     //  it's currently template to testing
-    this->waypoints_ = std::make_shared<Waypoints>();
-    this->waypoints_->waypoints = std::vector<VehicleGlobalPosition>(5);
-    this->waypoints_->waypoints = {
-        VehicleGlobalPosition().set__lat(47.397986).set__lon(8.546056).set__alt(-10.0)};
-
-    this->current_waypoint_ = this->waypoints_->waypoints[0];
+    std::vector<VehicleGlobalPosition> test_waypoints;
+    test_waypoints.push_back(VehicleGlobalPosition().set__lat(47.397986).set__lon(8.546056).set__alt(target_altitude_));
+    
+    this->waypoint_manager_.set_waypoints(test_waypoints);
 
     this->in_target_service_ = this->create_service<InTarget>(
         "/in_position",

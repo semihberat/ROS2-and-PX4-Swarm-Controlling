@@ -12,6 +12,7 @@ void SwarmMemberPathPlanner::state_cycle_callback()
     switch (this->current_mission)
     {
     case Mission::FORMATIONAL_TAKEOFF:
+
         formational_takeoff();
         break;
     case Mission::FORMATIONAL_ROTATION:
@@ -35,7 +36,7 @@ void SwarmMemberPathPlanner::collision_avoidance()
         return;
 
     current_n_distances = autonomus_utils::all_distances(this->current_neighbors_info_->neighbor_positions, this->current_neighbors_info_->main_position);
-    
+
     collision_bias.vlat = 0.0;
     collision_bias.vlon = 0.0;
 
@@ -43,10 +44,12 @@ void SwarmMemberPathPlanner::collision_avoidance()
     {
         double dlat_diff = this->current_n_distances[i].dlat_meter - this->initial_n_distances[i].dlat_meter;
         double dlon_diff = this->current_n_distances[i].dlon_meter - this->initial_n_distances[i].dlon_meter;
-        if(dlat_diff > 1.0){
+        if (dlat_diff > 1.0)
+        {
             collision_bias.vlat += dlat_diff;
         }
-        if(dlon_diff > 1.0){
+        if (dlon_diff > 1.0)
+        {
             collision_bias.vlon += dlon_diff;
         }
     }

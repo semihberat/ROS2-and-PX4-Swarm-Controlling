@@ -39,30 +39,7 @@ using namespace custom_interfaces::srv;
 
 using LifecycleCallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
-namespace autonomus_utils
-{
-    constexpr double STOP_THRESHOLD_01 = 0.1;
-    constexpr double STOP_THRESHOLD_001 = 0.01;
-
-    inline bool NeighborVerification(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors,
-                                     std::function<double(const px4_msgs::msg::VehicleGlobalPosition &)> func)
-    {
-        return std::all_of(neighbors.begin(), neighbors.end(), [func](const px4_msgs::msg::VehicleGlobalPosition &pos)
-                           { return std::abs(func(pos)) <= STOP_THRESHOLD_01; });
-    }
-
-    inline std::vector<DLatDLon> all_distances(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors, const px4_msgs::msg::VehicleGlobalPosition &main_position)
-    {
-        std::vector<DLatDLon> distances;
-        distances.reserve(neighbors.size());
-        for (const auto &neighbor_pos : neighbors)
-        {
-            distances.push_back(geo::calculate_distance<DLatDLon>(main_position.lat, main_position.lon,
-                                                                  neighbor_pos.lat, neighbor_pos.lon));
-        }
-        return distances;
-    }
-}
+#include "autonomus_utils.hpp"
 
 /**
  * @brief Autonomous swarm member that follows formation and executes missions
@@ -87,19 +64,33 @@ private:
     float target_dlat, target_dlon;
     float target_vlat, target_vlon;
 
+    double target_altitude_ = -10.0;
     double current_altitude;
 
-    float desired_vel = 2.0;
-    float desired_z_vel = 2.0;
-    float desired_yaw_vel = 0.5;
-    float desired_v_lat = 2.0;
-    float desired_v_lon = 2.0;
+    struct DesiredVelocities {
+        float vel = 2.0;
+        float z_vel = 2.0;
+        float yaw_vel = 0.5;
+        float v_lat = 2.0;
+        float v_lon = 2.0;
+    } desired_velocities;
+
+    struct CurrentCommands {
+        double v_lat = 0.0;
+        double v_lon = 0.0;
+        double z_vel = 0.0;
+        double yaw_vel = 0.0;
+        double bearing = 0.0;
+    } current_commands;
+
     std::mutex data_mutex_;
 
-    VehicleGlobalPosition cog;
-    VehicleGlobalPosition nearest_vehicle;
-    VehicleGlobalPosition circular_position;
-    VehicleGlobalPosition target_after_offset;
+    struct SwarmPositions {
+        VehicleGlobalPosition cog;
+        VehicleGlobalPosition nearest_vehicle;
+        VehicleGlobalPosition circular_position;
+        VehicleGlobalPosition target_after_offset;
+    } swarm_positions;
 
     rclcpp::CallbackGroup::SharedPtr cb_group;
     rclcpp::CallbackGroup::SharedPtr cb_group_2;
@@ -128,8 +119,8 @@ private:
     } collision_bias;
 
     // Test base
-    Waypoints::SharedPtr waypoints_;
-    VehicleGlobalPosition current_waypoint_;
+    autonomus_utils::WaypointManager waypoint_manager_;
+
     // Lists
     std::vector<px4_msgs::msg::VehicleGlobalPosition>
         all_positions;
