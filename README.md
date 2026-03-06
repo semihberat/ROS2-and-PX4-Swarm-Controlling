@@ -9,6 +9,7 @@ Bu döküman, projenin matematiksel altyapısını, otonom seyir logaritmasını
 ## İçindekiler Tablosu
 
 1. [Sisteme Genel Bakış ve Problemin Tanımı](#1-sisteme-genel-bakış-ve-problemin-tanımı)
+   - 1.1. [Teknoloji Yığını ve Seçim Kriterleri (Neden Dağıtık Sürü, ROS 2, PX4, C++?)](#11-teknoloji-yığını-ve-seçim-kriterleri)
 2. [Sistem Mimarisi, Dizin Yapısı ve Modülerlik](#2-sistem-mimarisi-dizin-yapısı-ve-modülerlik)
    - 2.1. Dağıtık ve Merkeziyetsiz Mimari
    - 2.2. Dizin Organizasyonu
@@ -46,6 +47,29 @@ Bu döküman, projenin matematiksel altyapısını, otonom seyir logaritmasını
 Birden çok İnsansız Hava Aracının dar veya geniş alanlarda ortak bir vizyon doğrultusunda uçması (Swarm Robotics), modern havacılığın en kompleks algoritmik problemlerinden biridir. Geleneksel sistemler "Master/Slave" bağımlılığı üzerinden çalışır. Yani yerdeki veya gökyüzündeki bir merkez bilgisayar ağdaki her bir drone'a ne yapması gerektiğini dikte eder. Ancak bu tasarımın en büyük handikabı, merkezdeki ünitenin haberleşmeyi kaybetmesi veya düşmesi durumunda tüm sürünün de felç geçirmesidir.
 
 **Çözüm:** `swarm_drone_control` paketinin otonom seyir modülü olan `SwarmMemberPathPlanner`, **merkeziyetsiz (decentralized)** bir formasyon geometrisi uygular. Her bir drone, uORB DDS (Data Distribution Service) köprüsü ile gelen `NeighborsInfo` (komşu bilgileri) topic'ini okur, formasyon içindeki kütle merkezini tespit eder ve etrafında dönerek rotasını dinamik bir vektörel tepki ile ayarlar. Böylece sistemden bir drone düşse bile diğerleri kendi ağırlık merkezlerini baştan asenkron hesaplayarak formasyonu anında onarabilir.
+
+### 1.1. Teknoloji Yığını ve Seçim Kriterleri
+
+Robotik sistemlerin çekirdeği (Core framework) inşa edilirken alınan teknolojik kararlar hayati önem taşır. Projede aşağıdaki spesifik teknolojiler bilerek seçilmiş ve entegre edilmiştir:
+
+#### Neden Dağıtık Sürü (Distributed Swarm) Mimarisi?
+- **Hata Toleransı (Fault Tolerance):** Merkezi bir "Master" İHA veya Yer İstasyonu kilitlenirse veya iletişim koparsa tüm sürü çökmez. 
+- **Ölçeklenebilirlik (Scalability):** Lider-Takipçi (Leader-Follower) mimarisinde ağ yükü lidere binerken, dağıtık mimaride her İHA kendi matematiksel hesabını yaptığı için filoyu $3$ araçtan $50$ araca çıkartmak işlemci yükünü katlarca artırmaz.
+- **Gerçek Zamanlı Otonomi:** Gerçek "Kuş veya Balık Sürüsü" matematiğinde olduğu gibi, kararlar lokal (yerel komşuluk verisiyle) alınır ancak bütünde organize, global sonuçlar üretir.
+
+#### Neden ROS 2 (Robot Operating System 2)?
+- **Uçtan Uca DDS (Data Distribution Service):** ROS 1'deki merkezi `roscore` Master düğümünün aksine, ROS 2 tamamen P2P (noktadan noktaya) UDP/DDS altyapısı sunar. Bu tam da sürünün dağıtık/merkeziyetsiz mantığıyla örtüşür.
+- **QoS (Quality of Service) Profilleri:** Uçuşta sensör verilerindeki anlık kopma ve paket kayıplarında, geçmiş pakedin yeniden iletilmesini beklemeden (TCP gecikmesi) güncel pakedi direkt yakalamak (UDP - Best Effort) İHA otonomisinde dronun donmasını engeller.
+- **Lifecycle Düğümleri:** ROS 2'ye özel *Lifecycle/Managed Nodes* yöntemi sayesinde her drone sensörlerinden ve algoritmalarından emin olana dek tehlikeli PX4 motor komutlarını basamaz, sistem istenildiğinde güvenle uykuya alınabilir/uyandırılabilir.
+
+#### Neden PX4 Autopilot?
+- **Araştırma ve Sürü Geliştirmesi:** PX4, hem yazılım standartı hem de donanım kartları yapısı bakımından (Pixhawk donanımları vb.) dünyada çoklu İHA (Swarm) geliştiricileri için en modifiye edilebilir, stabil Açık Kaynak platformudur.
+- **Offboard (Otonom) Kontrol ve TrajectorySetpoint:** PX4 Offboard uçuş moduyla, PID üzerinden $100\mathrm{Hz}$ frekansta doğrudan motor thrust ve velocity komutları hesaplanarak (X-Y-Z kartezyen boyutlarında) mükemmel bir tepki alınır.
+- **Micro-XRCE-DDS Köprüsü:** PX4, MAVROS'un getirdiği iletişim hantallığını tamamen aşarak Firmware içinden doğrudan ROS 2 DDS ağına köprü (bridge) kurabilir.
+
+#### Neden C++ Kullanıldı? (Python yerine)
+- **Gerçek Zamanlı İcra (Real-Time Performance):** Havada otonomi (özellikle $10\mathrm{\ ms}$ frekanslı `state_cycle_callback`) süreklilik arz eder. Binlerce Haversine ve trigonometrik integrali asenkron çözen bir döngüde, Python'un GIL (Global Interpreter Lock) engeli ve Garbage Collector duraksamaları sürünün havada saniyelik teklemesine (latency spike) ve kaza yapmasına yol açar.
+- **Donanım ve Bellek Seviyesi Güvenliği:** Oluşturduğumuz `WaypointManager` gibi pointer manipülasyonu mantıkları bellekle birebir etkileşim zorunluluğu barındırır. C++, donanımla arada yüksek performanslı iletişim sağlarken aynı zamanda `Segmentation Fault` sızıntılarını kırmak için gerekli kilitleri kurmamıza izin verir.
 
 ## 2. Sistem Mimarisi, Dizin Yapısı ve Modülerlik
 
