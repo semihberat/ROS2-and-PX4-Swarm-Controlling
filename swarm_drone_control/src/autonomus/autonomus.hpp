@@ -39,6 +39,23 @@ using namespace custom_interfaces::srv;
 
 using LifecycleCallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
+// ANSI Color Codes for Terminal Output
+#define COLOR_RESET "\033[0m"
+#define COLOR_RED "\033[1;31m"
+#define COLOR_GREEN "\033[1;32m"
+#define COLOR_YELLOW "\033[1;33m"
+#define COLOR_BLUE "\033[1;34m"
+#define COLOR_MAGENTA "\033[1;35m"
+#define COLOR_CYAN "\033[1;36m"
+#define COLOR_WHITE "\033[1;37m"
+
+// Colored Logging Macros
+#define LOG_INFO(logger, ...) RCLCPP_INFO(logger, COLOR_CYAN __VA_ARGS__ COLOR_RESET)
+#define LOG_WARN(logger, ...) RCLCPP_WARN(logger, COLOR_YELLOW __VA_ARGS__ COLOR_RESET)
+#define LOG_ERROR(logger, ...) RCLCPP_ERROR(logger, COLOR_RED __VA_ARGS__ COLOR_RESET)
+#define LOG_MISSION(logger, ...) RCLCPP_INFO(logger, COLOR_GREEN __VA_ARGS__ COLOR_RESET)
+#define LOG_SUCCESS(logger, ...) RCLCPP_INFO(logger, COLOR_MAGENTA __VA_ARGS__ COLOR_RESET)
+
 #include "autonomus_utils.hpp"
 
 /**
@@ -67,7 +84,8 @@ private:
     double target_altitude_ = -10.0;
     double current_altitude;
 
-    struct DesiredVelocities {
+    struct DesiredVelocities
+    {
         float vel = 2.0;
         float z_vel = 2.0;
         float yaw_vel = 0.5;
@@ -75,7 +93,8 @@ private:
         float v_lon = 2.0;
     } desired_velocities;
 
-    struct CurrentCommands {
+    struct CurrentCommands
+    {
         double v_lat = 0.0;
         double v_lon = 0.0;
         double z_vel = 0.0;
@@ -85,7 +104,8 @@ private:
 
     std::mutex data_mutex_;
 
-    struct SwarmPositions {
+    struct SwarmPositions
+    {
         VehicleGlobalPosition cog;
         VehicleGlobalPosition nearest_vehicle;
         VehicleGlobalPosition circular_position;
@@ -184,6 +204,9 @@ private:
 
     /** @brief Calculate initial values for mission */
     void initial_calculations_before_mission();
+
+    /** @brief Initialize positioned drones vector for synchronization */
+    void initialize_positioned_drones();
 
     /** @brief In target service callback */
     void in_target_callback(const InTarget::Request::SharedPtr request, const InTarget::Response::SharedPtr response);

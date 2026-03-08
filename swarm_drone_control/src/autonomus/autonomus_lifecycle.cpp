@@ -108,7 +108,7 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_shutdown(const rclcpp_lifecyc
 
 LifecycleCallbackReturn SwarmMemberPathPlanner::on_error(const rclcpp_lifecycle::State &previous_state)
 {
-    RCLCPP_ERROR(this->get_logger(), "ON_ERROR");
+    LOG_ERROR(this->get_logger(), "ON_ERROR");
 
     if (this->timer_)
     {

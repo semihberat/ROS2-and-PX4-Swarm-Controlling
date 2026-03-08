@@ -18,7 +18,7 @@ namespace autonomus_utils
                                      std::function<double(const px4_msgs::msg::VehicleGlobalPosition &)> func)
     {
         return std::all_of(neighbors.begin(), neighbors.end(), [func](const px4_msgs::msg::VehicleGlobalPosition &pos)
-                           { return std::abs(func(pos)) <= STOP_THRESHOLD_01; });
+                           { return std::abs(func(pos)) <= STOP_THRESHOLD_001; });
     }
 
     inline std::vector<DLatDLon> all_distances(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors, const px4_msgs::msg::VehicleGlobalPosition &main_position)
@@ -52,7 +52,8 @@ namespace autonomus_utils
         const std::vector<px4_msgs::msg::VehicleGlobalPosition> &all_positions,
         const px4_msgs::msg::VehicleGlobalPosition &target_waypoint)
     {
-        if (all_positions.empty()) return target_waypoint; // fallback
+        if (all_positions.empty())
+            return target_waypoint; // fallback
 
         px4_msgs::msg::VehicleGlobalPosition nearest = all_positions.front();
         double min_dist = geo::calculate_distance<DLatDLon>(target_waypoint.lat, target_waypoint.lon, nearest.lat, nearest.lon).distance;
@@ -91,13 +92,15 @@ namespace autonomus_utils
         int current_index_{0};
 
     public:
-        WaypointManager() {
+        WaypointManager()
+        {
             wp_msg_ = std::make_shared<custom_interfaces::msg::Waypoints>();
         }
 
         void set_waypoints(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &list)
         {
-            if (wp_msg_) {
+            if (wp_msg_)
+            {
                 wp_msg_->waypoints = list;
                 current_index_ = 0;
             }
@@ -119,13 +122,15 @@ namespace autonomus_utils
                 current_index_++;
                 return current();
             }
-            if (wp_msg_) current_index_ = wp_msg_->waypoints.size();
+            if (wp_msg_)
+                current_index_ = wp_msg_->waypoints.size();
             return nullptr;
         }
 
         bool is_finished() const
         {
-            if (!wp_msg_) return true;
+            if (!wp_msg_)
+                return true;
             return current_index_ >= static_cast<int>(wp_msg_->waypoints.size());
         }
 

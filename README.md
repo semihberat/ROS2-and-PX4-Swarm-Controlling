@@ -226,19 +226,138 @@ double z_error = current_altitude + wp->alt;
 
 ---
 
-## 7. Çarpışma Önleme (Collision Avoidance) Mimarisi
+## 7. Çarpışma Önleme (Collision Avoidance) ve Formasyon Koruma Mimarisi
 
-Dronlar rotasyondan çıkıp `GOTO_POSITION`'da hedefe uçarken, sensörlerin veya komşu telemetrilerin (NeighborsInfo DDS) algıladığı objeler, bir potansiyel enerji alanı (Artificial Potential Field Vector) yaratacak şekilde hesaplanır:
+Dronlar rotasyondan çıkıp `GOTO_POSITION`'da hedefe uçarken, hem çarpışmalardan kaçınmaları hem de başlangıç formasyonunu koruyarak koordineli hareket etmeleri gerekmektedir. Bu sistem, **Artificial Potential Field (Yapay Potansiyel Alan)** teorisi ile **Distance-Based Adaptive Damping (Mesafe Bazlı Adaptif Sönümleme)** yaklaşımının hibridinden oluşan sofistike bir algoritmadır.
 
-1. Başlangıçta hedefe giden teorik X ve Y hızları bulunur. ($V_{\mathrm{hedef\_lat}}$, $V_{\mathrm{hedef\_lon}}$)
-2. Çarpışma riski taşıyan bir obje yaklaşmaktaysa, o objenin dronumuz üzerinde itici bir kuvvet vektörü (`collision_bias.vlat` , `.vlon`) yarattığı fiziki model işleme koyulur.
-3. Drone, iki hız vektörünü üst üste toplar (Superposition Model):
+### 7.1. Dinamik Güvenlik Mesafesi (Speed-Adaptive Safety Distance)
 
-$$ V_{\mathrm{son\_x}} = V_{\mathrm{hedef\_lat}} + \mathrm{Bias}_{\mathrm{carpisma\_x}} $$
+Geleneksel sabit güvenlik mesafesi yaklaşımı yerine, drone'un anlık hızına göre adaptif bir güvenlik bölgesi tanımlanmıştır:
 
-$$ V_{\mathrm{son\_y}} = V_{\mathrm{hedef\_lon}} + \mathrm{Bias}_{\mathrm{carpisma\_y}} $$
+$$ D_{\mathrm{safety}} = D_{\mathrm{base}} + (V_{\mathrm{current}} \times K_{\mathrm{speed}}) $$
 
-Böylece drone objeden teğet kaçarak yumuşak bir yörünge çizer ve hedef noktasına ulaşmadan önce "sekter" eylemi gerçekleştirmiş olur.
+Parametreler:
+- $D_{\mathrm{base}} = 1.0 \mathrm{\ m}$: Durağan durumda minimum güvenlik mesafesi
+- $K_{\mathrm{speed}} = 0.85$: Hız kazanç faktörü (metre/saniye başına eklenen mesafe)
+- $V_{\mathrm{current}} = \sqrt{v_{\mathrm{lat}}^2 + v_{\mathrm{lon}}^2}$: Drone'un yatay düzlemdeki anlık hızı
+
+**Örnek Senaryolar:**
+- Drone duruyorken → $D_{\mathrm{safety}} = 1.0 \mathrm{\ m}$
+- $1 \mathrm{\ m/s}$ hızda → $D_{\mathrm{safety}} = 1.85 \mathrm{\ m}$
+- $2 \mathrm{\ m/s}$ hızda → $D_{\mathrm{safety}} = 2.7 \mathrm{\ m}$
+- $3 \mathrm{\ m/s}$ hızda → $D_{\mathrm{safety}} = 3.55 \mathrm{\ m}$
+
+Bu yaklaşım sayesinde yüksek hızlarda reaktif mesafe artarak güvenlik marjini korunur.
+
+### 7.2. Çok Katmanlı Kuvvet Sistemi (Multi-Layered Force Architecture)
+
+Sistem üç ana kuvvet bileşeninden oluşur:
+
+#### A) Formation Keeping Force (Formasyon Koruma Kuvveti)
+
+Başlangıçta (`FORMATIONAL_ROTATION` evresinde) kaydedilen komşu drone'larla olan mesafeler (`initial_n_distances`) referans olarak saklanır. Mission sırasında bu mesafelere yakınlık sürekli hesaplanır:
+
+$$ \Delta d_{\mathrm{lat}}^{(i)} = d_{\mathrm{current\_lat}}^{(i)} - d_{\mathrm{initial\_lat}}^{(i)} $$
+
+$$ \Delta d_{\mathrm{lon}}^{(i)} = d_{\mathrm{current\_lon}}^{(i)} - d_{\mathrm{initial\_lon}}^{(i)} $$
+
+Eğer sapma **1.0 metre** eşiğini aşarsa, düzeltici kuvvet uygulanır:
+
+$$ \mathbf{F}_{\mathrm{formation}} = \sum_{i=1}^{N_{\mathrm{neighbors}}} \begin{cases} 
+\Delta d_{\mathrm{lat/lon}}^{(i)} & \text{if } |\Delta d^{(i)}| > 1.0 \mathrm{\ m} \\
+0 & \text{otherwise}
+\end{cases} $$
+
+#### B) Distance-Based Adaptive Damping (Mesafe Bazlı Adaptif Sönümleme)
+
+**Kritik Yenilik:** Formasyonun hedefe yaklaştıkça "gevşemesi" ve lokal minimum tuzağından kaçınması için mesafe bazlı bir sönümleme mekanizması geliştirilmiştir.
+
+Hedefe olan mesafe ($d_{\mathrm{target}}$) ile hesaplanan **distance ratio**:
+
+$$ r_{\mathrm{distance}} = \min\left(\frac{d_{\mathrm{target}}}{10.0}, 1.0\right) $$
+
+Bu ratio'ya göre dinamik kuvvet katsayıları:
+
+$$ K_{\mathrm{formation}} = 0.3 + (r_{\mathrm{distance}} \times 0.2) \quad \in [0.3, 0.5] $$
+
+$$ K_{\mathrm{attraction}} = 0.5 - (r_{\mathrm{distance}} \times 0.3) \quad \in [0.2, 0.5] $$
+
+**Davranış Profili:**
+
+| Hedefe Mesafe | $r_{\mathrm{distance}}$ | $K_{\mathrm{formation}}$ | $K_{\mathrm{attraction}}$ | Davranış |
+|---------------|-------------------------|--------------------------|---------------------------|----------|
+| > 10 m        | 1.0                     | 0.5 (Güçlü)              | 0.2 (Zayıf)               | Formasyon öncelikli |
+| 5-10 m        | 0.5-1.0                 | 0.4                      | 0.35                      | Dengeli mod |
+| < 5 m         | < 0.5                   | 0.3 (Gevşek)             | 0.5 (Güçlü)               | Hedef öncelikli |
+
+#### C) Attractive Force Towards Target (Hedefe Çekim Kuvveti)
+
+Lokal minimum problemi (drone'ların formasyon kuvvetleri yüzünden hedefe varamadan "takılıp kalması") çözümü için hedefe doğru ek bir çekim kuvveti eklenmiştir:
+
+$$ \mathbf{F}_{\mathrm{attraction}} = -K_{\mathrm{attraction}} \cdot \min\left(\frac{d_{\mathrm{target}}}{5.0}, 1.0\right) \cdot \hat{\mathbf{d}}_{\mathrm{target}} $$
+
+Burada $\hat{\mathbf{d}}_{\mathrm{target}}$ hedefe doğru normalize edilmiş birim vektördür:
+
+$$ \hat{\mathbf{d}}_{\mathrm{target}} = \frac{1}{d_{\mathrm{target}}} \begin{pmatrix} \Delta \mathrm{lat}_{\mathrm{meter}} \\ \Delta \mathrm{lon}_{\mathrm{meter}} \end{pmatrix} $$
+
+**Önemli Not:** Bu kuvvet sadece `Mission::GOTO_POSITION` evresinde aktiftir. Diğer evrelerde (kalkış, rotasyon) standart formasyon koruma devam eder.
+
+### 7.3. Final Velocity Calculation (Son Hız Hesabı)
+
+Tüm kuvvetler toplanarak drone'un PX4'e gönderilen son hız komutu hesaplanır:
+
+$$ V_{\mathrm{final\_lat}} = V_{\mathrm{target\_lat}} + (K_{\mathrm{formation}} \cdot F_{\mathrm{formation\_lat}}) + F_{\mathrm{attraction\_lat}} $$
+
+$$ V_{\mathrm{final\_lon}} = V_{\mathrm{target\_lon}} + (K_{\mathrm{formation}} \cdot F_{\mathrm{formation\_lon}}) + F_{\mathrm{attraction\_lon}} $$
+
+Sonuçlar güvenlik sınırları içinde tutulur (anti-oscillation):
+
+$$ V_{\mathrm{final}} = \mathrm{clamp}(V_{\mathrm{final}}, \quad -1.5, \quad +1.5) \mathrm{\ m/s} $$
+
+Bu limitler sürünün aşırı hareketlerle (oscillation/salınım) enerji kaybetmesini veya kontrolden çıkmasını engeller.
+
+### 7.4. Algoritmanın Avantajları
+
+1. **Lokal Minimum Çözümü:** Hedefe yaklaşırken formasyon gevşer, drone'lar hedefe ekstra çekimle ulaşır
+2. **Formasyon Bütünlüğü:** Uzak mesafelerde güçlü formasyon kuvveti koordineli hareketi garanti eder
+3. **Hıza Göre Adaptasyon:** Güvenlik mesafesi dinamik olduğu için farklı hız profillerinde güvenli kalır
+4. **Mission-Aware Behavior:** Her mission evresine özel davranış profili
+5. **Smooth Transitions:** Kuvvet geçişleri keskin değil pürüzsüz (continuous) olduğu için drone yalpalamaz
+
+### 7.5. Kod Referansı ve İmplementasyon
+
+Collision avoidance işleyişi `autonomus_timers.cpp` içerisindeki `collision_avoidance()` fonksiyonunda $100\mathrm{Hz}$ frekansta çalışır:
+
+```cpp
+void SwarmMemberPathPlanner::collision_avoidance()
+{
+    // 1. Formation keeping forces hesaplama
+    for (size_t i = 0; i < current_n_distances.size(); ++i) {
+        double dlat_diff = current_n_distances[i].dlat_meter - initial_n_distances[i].dlat_meter;
+        // Sapma > 1.0m ise düzeltici kuvvet ekle
+    }
+    
+    // 2. Distance-based damping (sadece GOTO_POSITION'da)
+    if (current_mission == Mission::GOTO_POSITION) {
+        double distance_ratio = std::min(target_distance.distance / 10.0, 1.0);
+        double formation_strength = 0.3 + (distance_ratio * 0.2);
+        double attraction_strength = 0.5 - (distance_ratio * 0.3);
+        
+        // 3. Attractive force towards target
+        collision_bias.vlat -= (target_normalized * attraction_strength);
+    }
+    
+    // 4. Smooth limiting
+    collision_bias.vlat = std::clamp(collision_bias.vlat, -1.5, 1.5);
+}
+```
+
+Bu işleyiş ardından `goto_position()` içerisinde hız komutlarına eklenir:
+
+```cpp
+current_commands.v_lat += collision_bias.vlat;
+current_commands.v_lon += collision_bias.vlon;
+```
 
 ---
 
