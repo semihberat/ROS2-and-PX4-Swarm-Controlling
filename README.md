@@ -1,6 +1,11 @@
 # Sürü İHA (Swarm Drone Control) Kapsamlı Sistem, Mimari ve Matematiksel Modeller Dokümantasyonu
 
 Bu belge, **ROS 2 (Robot Operating System 2)** ve **PX4 Framework (MAVLink/MAVROS ve uORB/DDS)** üzerine inşa edilmiş `swarm_drone_control` paketinin uçtan uca çalışmasını anlatan **kapsamlı mühendislik ve teorik altyapı** referansıdır.
+## Demo (Screencast)
+
+<video src="screencast.mp4" controls="controls" style="max-width: 100%;">
+  Tarayıcınız video etiketini desteklemiyor.
+</video>
 
 
 
@@ -11,6 +16,7 @@ Bu döküman, projenin matematiksel altyapısını, otonom seyir logaritmasını
 ## İçindekiler Tablosu
 
 - [Sürü İHA (Swarm Drone Control) Kapsamlı Sistem, Mimari ve Matematiksel Modeller Dokümantasyonu](#sürü-i̇ha-swarm-drone-control-kapsamlı-sistem-mimari-ve-matematiksel-modeller-dokümantasyonu)
+  - [Demo (Screencast)](#demo-screencast)
   - [İçindekiler Tablosu](#i̇çindekiler-tablosu)
   - [1. Sisteme Genel Bakış ve Problemin Tanımı](#1-sisteme-genel-bakış-ve-problemin-tanımı)
     - [1.1. Teknoloji Yığını ve Seçim Kriterleri](#11-teknoloji-yığını-ve-seçim-kriterleri)
