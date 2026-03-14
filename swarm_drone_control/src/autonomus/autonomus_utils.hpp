@@ -18,7 +18,7 @@ namespace autonomus_utils
                                      std::function<double(const px4_msgs::msg::VehicleGlobalPosition &)> func)
     {
         return std::all_of(neighbors.begin(), neighbors.end(), [func](const px4_msgs::msg::VehicleGlobalPosition &pos)
-                           { return std::abs(func(pos)) <= STOP_THRESHOLD_001; });
+                           { return std::abs(func(pos)) <= STOP_THRESHOLD_01; });
     }
 
     inline std::vector<DLatDLon> all_distances(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors, const px4_msgs::msg::VehicleGlobalPosition &main_position)

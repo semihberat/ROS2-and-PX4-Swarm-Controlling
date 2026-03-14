@@ -11,7 +11,7 @@ void SwarmMemberPathPlanner::formational_takeoff()
 
     double z_error = current_altitude + wp->alt;
     current_commands.z_vel = autonomus_utils::calculate_velocity<double>(z_error, desired_velocities.z_vel);
-    if (std::abs(z_error) <= autonomus_utils::STOP_THRESHOLD_001)
+    if (std::abs(z_error) <= autonomus_utils::STOP_THRESHOLD_01)
     {
 
         if (autonomus_utils::NeighborVerification(this->current_neighbors_info_->neighbor_positions,
@@ -39,17 +39,10 @@ void SwarmMemberPathPlanner::formational_rotation()
     current_commands.yaw_vel = autonomus_utils::calculate_velocity<double>(d.dlat_meter, desired_velocities.yaw_vel);
 
     // Check Neighbors
-    if (std::abs(d.distance) < autonomus_utils::STOP_THRESHOLD_001)
+    if (std::abs(d.distance) < autonomus_utils::STOP_THRESHOLD_01)
     {
-        publish_trajectory_setpoint(0.0, 0.0, 0.0, 0.0);
-        call_in_target_client();
-
-        if (std::all_of(positioned_drones_.begin(), positioned_drones_.end(), [](const InTarget::Request::SharedPtr &request)
-                        { return request->is_in_position; }))
-        {
-            next_step();
-            return;
-        }
+        next_step();
+        return;
     }
     publish_trajectory_setpoint(current_commands.v_lat, current_commands.v_lon, 0.0, current_commands.yaw_vel);
 }
@@ -68,10 +61,10 @@ void SwarmMemberPathPlanner::goto_position()
     current_commands.v_lat += collision_bias.vlat;
     current_commands.v_lon += collision_bias.vlon;
 
-    if (std::abs(d.distance) <= autonomus_utils::STOP_THRESHOLD_001)
+    if (std::abs(d.distance) <= autonomus_utils::STOP_THRESHOLD_01)
     {
-        publish_trajectory_setpoint(0.0, 0.0, 0.0, 0.0);
-        timer_2->cancel();
+
+       
         next_step();
         return;
     }
@@ -133,8 +126,24 @@ void SwarmMemberPathPlanner::next_step()
 
     case Mission::GOTO_POSITION:
     {
-        this->current_mission = Mission::DO_PROCESS;
-        LOG_MISSION(this->get_logger(), "[MISSION INFO] __DO_PROCESS");
+        // Hedefe ulaşıldı, bir sonraki waypoint'e geç
+        const auto *next_wp = waypoint_manager_.next();
+        
+        if (next_wp != nullptr)
+        {
+            // Yeni waypoint varsa tekrar rotasyon ve gidiş adımlarına başla
+            this->current_mission = Mission::FORMATIONAL_ROTATION;
+            LOG_MISSION(this->get_logger(), "[MISSION INFO] __FORMATIONAL_ROTATION (Next Waypoint)");
+            
+            // Yeni waypoint için hedefleri tekrar hesapla
+            initial_calculations_before_mission();
+        }
+        else
+        {
+            // Tüm waypointler bittiyse görev sonu (veya işlem) durumuna geç
+            this->current_mission = Mission::DO_PROCESS;
+            LOG_MISSION(this->get_logger(), "[MISSION INFO] __DO_PROCESS");
+        }
         break;
     }
     case Mission::DO_PROCESS:
