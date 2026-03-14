@@ -138,6 +138,11 @@ private:
         float vlon = 0.0;
     } collision_bias;
 
+    // Anti Local Minima (Stuck Detection) State
+    int stuck_check_counter = 0;
+    int ignore_collision_counter = 0;
+    px4_msgs::msg::VehicleGlobalPosition last_checked_stuck_pos;
+
     // Test base
     autonomus_utils::WaypointManager waypoint_manager_;
 

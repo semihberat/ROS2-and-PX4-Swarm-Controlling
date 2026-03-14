@@ -12,7 +12,7 @@ namespace autonomus_utils
 {
     constexpr double STOP_THRESHOLD_01 = 0.1;
     constexpr double STOP_THRESHOLD_001 = 0.01;
-    constexpr float P_GAIN = 0.5f;
+    constexpr float P_GAIN = 0.9f;
 
     inline bool NeighborVerification(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors,
                                      std::function<double(const px4_msgs::msg::VehicleGlobalPosition &)> func)
