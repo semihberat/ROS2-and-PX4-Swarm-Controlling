@@ -1,11 +1,6 @@
 # Sürü İHA (Swarm Drone Control) Kapsamlı Sistem, Mimari ve Matematiksel Modeller Dokümantasyonu
 
 Bu belge, **ROS 2 (Robot Operating System 2)** ve **PX4 Framework (MAVLink/MAVROS ve uORB/DDS)** üzerine inşa edilmiş `swarm_drone_control` paketinin uçtan uca çalışmasını anlatan **kapsamlı mühendislik ve teorik altyapı** referansıdır.
-## Demo (Screencast)
-
-<video src="screencast.webm" controls="controls" style="max-width: 100%;">
-  Tarayıcınız video etiketini desteklemiyor.
-</video>
 
 
 
@@ -15,42 +10,59 @@ Bu döküman, projenin matematiksel altyapısını, otonom seyir logaritmasını
 
 ## İçindekiler Tablosu
 
-1. [Sisteme Genel Bakış ve Problemin Tanımı](#1-sisteme-genel-bakış-ve-problemin-tanımı)
-   - 1.1. [Teknoloji Yığını ve Seçim Kriterleri (Neden Dağıtık Sürü, ROS 2, PX4, C++?)](#11-teknoloji-yığını-ve-seçim-kriterleri)
-2. [Sistem Mimarisi, Dizin Yapısı ve Modülerlik](#2-sistem-mimarisi-dizin-yapısı-ve-modülerlik)
-   - 2.1. Dağıtık ve Merkeziyetsiz Mimari
-   - 2.2. Dizin Organizasyonu
-3. [ROS 2 Lifecycle ve State Machine Dinamikleri](#3-ros-2-lifecycle-ve-state-machine-dinamikleri)
-   - 3.1. Düğüm Evreleri (Node Transitions)
-   - 3.2. Görev-Durum (Mission State) Makinesi
-4. [Teorik Altyapı ve Matematiksel Algoritmalar](#4-teorik-altyapı-ve-matematiksel-algoritmalar)
-   - 4.1. WGS84 Coğrafi Koordinat Modelleri
-   - 4.2. Mesafe Belirleme (Haversine Formula)
-   - 4.3. Mutlak Doğrultu (Absolute Bearing) Çıkarımı
-   - 4.4. Ağırlık Merkezi (Center of Gravity - CoG) Yaklaşımı
-   - 4.5. Hedef Rotasyon Algoritması ve Geometrik İzdüşüm
-   - 4.6. Euler/Quaternion Dönüşüm Teorisi
-5. [Oransal (PID) Hız Kontrolü Katmanı](#5-oransal-pid-hız-kontrolü-katmanı)
-   - 5.1. Continuous Time vs Discrete Time Karşılaştırması
-   - 5.2. Hata (Error) Çıkarımı ve Clamping Limits
-6. [Bellek Yönetimi ve `WaypointManager` Mimarisi](#6-bellek-yönetimi-ve-waypointmanager-mimarisi)
-   - 6.1. Sorun: Vektör İndeks Çökmeleri (Segmentation Faults)
-   - 6.2. Çözüm: Bağlı Liste (Linked List) Felsefesi ve Failsafe
-7. [Çarpışma Önleme (Collision Avoidance) Mimarisi](#7-çarpışma-önleme-collision-avoidance-mimarisi)
-8. [ROS 2 QoS, DDS ve Haberleşme Modeli](#8-ros-2-qos-dds-ve-haberleşme-modeli)
-9. [Kod İçi API ve Fonksiyon Referansları](#9-kod-içi-api-ve-fonksiyon-referansları)
-   - 9.1. `autonomus_utils.hpp` Çekirdek İşlevleri
-   - 9.2. `geographic.hpp` Yardımcıları
-10. [Adım Adım Kurulum ve Kullanım Kılavuzu](#10-adım-adım-kurulum-ve-kullanım-kılavuzu)
-    - 10.1. Gereksinimler ve Bağımlılıklar
-    - 10.2. Build İşlemleri
-    - 10.3. Çalıştırma Parametreleri
-    - 10.4. ROS Topic Haritası
-11. [Gerçek Dünya Donanım ve Ağ Kılavuzu (Hardware & Network Setup)](#11-gerçek-dünya-donanım-ve-ağ-kılavuzu)
-    - 11.1. Uçuş Kontrol Kartı ve Companion Computer Seçimi
-    - 11.2. Ağ Topolojisi: Wi-Fi Mesh vs Access Point (AP)
-    - 11.3. Uzun Mesafe İletişim (Long-Range Telemetry)
-    - 11.4. Donanımsal Olarak Sistem Blok Şeması
+- [Sürü İHA (Swarm Drone Control) Kapsamlı Sistem, Mimari ve Matematiksel Modeller Dokümantasyonu](#sürü-i̇ha-swarm-drone-control-kapsamlı-sistem-mimari-ve-matematiksel-modeller-dokümantasyonu)
+  - [İçindekiler Tablosu](#i̇çindekiler-tablosu)
+  - [1. Sisteme Genel Bakış ve Problemin Tanımı](#1-sisteme-genel-bakış-ve-problemin-tanımı)
+    - [1.1. Teknoloji Yığını ve Seçim Kriterleri](#11-teknoloji-yığını-ve-seçim-kriterleri)
+      - [Neden Dağıtık Sürü (Distributed Swarm) Mimarisi?](#neden-dağıtık-sürü-distributed-swarm-mimarisi)
+      - [Neden ROS 2 (Robot Operating System 2)?](#neden-ros-2-robot-operating-system-2)
+      - [Neden PX4 Autopilot?](#neden-px4-autopilot)
+      - [Neden C++ Kullanıldı? (Python yerine)](#neden-c-kullanıldı-python-yerine)
+  - [2. Sistem Mimarisi, Dizin Yapısı ve Modülerlik](#2-sistem-mimarisi-dizin-yapısı-ve-modülerlik)
+    - [2.1. Dağıtık ve Merkeziyetsiz Mimari](#21-dağıtık-ve-merkeziyetsiz-mimari)
+    - [2.2. Dizin Organizasyonu](#22-dizin-organizasyonu)
+  - [3. ROS 2 Lifecycle ve State Machine Dinamikleri](#3-ros-2-lifecycle-ve-state-machine-dinamikleri)
+    - [3.1. Düğüm Evreleri (Node Transitions)](#31-düğüm-evreleri-node-transitions)
+    - [3.2. Görev-Durum (Mission State) Makinesi](#32-görev-durum-mission-state-makinesi)
+  - [4. Teorik Altyapı ve Matematiksel Algoritmalar](#4-teorik-altyapı-ve-matematiksel-algoritmalar)
+    - [4.1. WGS84 Coğrafi Koordinat Modelleri](#41-wgs84-coğrafi-koordinat-modelleri)
+    - [4.2. Mesafe Belirleme (Haversine Formula)](#42-mesafe-belirleme-haversine-formula)
+    - [4.3. Mutlak Doğrultu (Absolute Bearing) Çıkarımı](#43-mutlak-doğrultu-absolute-bearing-çıkarımı)
+    - [4.4. Ağırlık Merkezi (Center of Gravity - CoG) Yaklaşımı](#44-ağırlık-merkezi-center-of-gravity---cog-yaklaşımı)
+    - [4.5. Hedef Rotasyon Algoritması ve Geometrik İzdüşüm](#45-hedef-rotasyon-algoritması-ve-geometrik-i̇zdüşüm)
+    - [4.6. Euler/Quaternion Dönüşüm Teorisi](#46-eulerquaternion-dönüşüm-teorisi)
+  - [5. Oransal (PID) Hız Kontrolü Katmanı](#5-oransal-pid-hız-kontrolü-katmanı)
+    - [5.1. Continuous Time vs Discrete Time Karşılaştırması](#51-continuous-time-vs-discrete-time-karşılaştırması)
+    - [5.2. Hata (Error) Çıkarımı ve Clamping Limits](#52-hata-error-çıkarımı-ve-clamping-limits)
+  - [6. Bellek Yönetimi ve `WaypointManager` Mimarisi](#6-bellek-yönetimi-ve-waypointmanager-mimarisi)
+    - [6.1. Sorun: Vektör İndeks Çökmeleri (Segmentation Faults)](#61-sorun-vektör-i̇ndeks-çökmeleri-segmentation-faults)
+    - [6.2. Çözüm: Bağlı Liste (Linked List) Felsefesi ve Failsafe](#62-çözüm-bağlı-liste-linked-list-felsefesi-ve-failsafe)
+  - [7. Çarpışma Önleme (Collision Avoidance) ve Formasyon Koruma Mimarisi](#7-çarpışma-önleme-collision-avoidance-ve-formasyon-koruma-mimarisi)
+    - [7.1. Dinamik Güvenlik Mesafesi (Speed-Adaptive Safety Distance)](#71-dinamik-güvenlik-mesafesi-speed-adaptive-safety-distance)
+    - [7.2. Çok Katmanlı Kuvvet Sistemi (Multi-Layered Force Architecture)](#72-çok-katmanlı-kuvvet-sistemi-multi-layered-force-architecture)
+      - [A) Formation Keeping Force (Formasyon Koruma Kuvveti)](#a-formation-keeping-force-formasyon-koruma-kuvveti)
+      - [B) Distance-Based Adaptive Damping (Mesafe Bazlı Adaptif Sönümleme)](#b-distance-based-adaptive-damping-mesafe-bazlı-adaptif-sönümleme)
+      - [C) Attractive Force Towards Target (Hedefe Çekim Kuvveti)](#c-attractive-force-towards-target-hedefe-çekim-kuvveti)
+    - [7.3. Final Velocity Calculation (Son Hız Hesabı)](#73-final-velocity-calculation-son-hız-hesabı)
+    - [7.4. Algoritmanın Avantajları](#74-algoritmanın-avantajları)
+    - [7.5. Kod Referansı ve İmplementasyon](#75-kod-referansı-ve-i̇mplementasyon)
+  - [8. ROS 2 QoS, DDS ve Haberleşme Modeli](#8-ros-2-qos-dds-ve-haberleşme-modeli)
+  - [9. Kod İçi API ve Fonksiyon Referansları](#9-kod-i̇çi-api-ve-fonksiyon-referansları)
+    - [9.1. `autonomus_utils.hpp` Çekirdek İşlevleri](#91-autonomus_utilshpp-çekirdek-i̇şlevleri)
+    - [9.2. `geographic.hpp` Yardımcıları](#92-geographichpp-yardımcıları)
+  - [10. Adım Adım Kurulum ve Kullanım Kılavuzu](#10-adım-adım-kurulum-ve-kullanım-kılavuzu)
+    - [10.1. Gereksinimler ve Bağımlılıklar](#101-gereksinimler-ve-bağımlılıklar)
+    - [10.2. Build İşlemleri](#102-build-i̇şlemleri)
+    - [10.3. Çalıştırma Parametreleri](#103-çalıştırma-parametreleri)
+    - [10.4. ROS Topic Haritası Modeli](#104-ros-topic-haritası-modeli)
+  - [11. Gerçek Dünya Donanım ve Ağ Kılavuzu](#11-gerçek-dünya-donanım-ve-ağ-kılavuzu)
+    - [11.1. Uçuş Kontrol Kartı ve Companion Computer Seçimi](#111-uçuş-kontrol-kartı-ve-companion-computer-seçimi)
+    - [11.2. Donanım ve Ağ Topolojisi: Drone ve Yer İstasyonu Cihazları](#112-donanım-ve-ağ-topolojisi-drone-ve-yer-i̇stasyonu-cihazları)
+      - [A) Yer Kontrol İstasyonu (GCS - Yerdeki Donanımlar)](#a-yer-kontrol-i̇stasyonu-gcs---yerdeki-donanımlar)
+      - [B) Drone Üzerindeki Modüller ve Antenler (Uçan Donanımlar)](#b-drone-üzerindeki-modüller-ve-antenler-uçan-donanımlar)
+      - [C) Wi-Fi Ad-Hoc / Mesh Network (Düğüm Ağı - Tam Merkeziyetsiz)](#c-wi-fi-ad-hoc--mesh-network-düğüm-ağı---tam-merkeziyetsiz)
+    - [11.3. Uzun Mesafe İletişim (Long-Range Telemetry)](#113-uzun-mesafe-i̇letişim-long-range-telemetry)
+    - [11.4. Donanımsal Olarak Sistem Blok Şeması](#114-donanımsal-olarak-sistem-blok-şeması)
 
 ---
 
