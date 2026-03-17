@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import rclpy # Python library for ROS 2
 from rclpy.node import Node # Handles the creation of nodes
 from rclpy.lifecycle import LifecycleNode

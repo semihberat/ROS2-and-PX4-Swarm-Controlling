@@ -138,6 +138,26 @@ private:
         float vlon = 0.0;
     } collision_bias;
 
+    CollisionBias previous_collision_bias_;
+
+    struct CollisionAvoidanceConfig
+    {
+        double min_collision_distance = 1.5;
+        double collision_speed_factor = 0.5;
+        double min_safe_distance = 0.1;
+        double formation_gain = 0.05;
+        double repulsion_gain = 1.0;
+        double deadband_dlat = 2.0;
+        double deadband_dlon = 1.5;
+        double bias_limit = 1.0;
+        int stuck_check_cycles = 20;              // 20 x 100ms = 2s
+        double stuck_movement_threshold = 0.35;   // meter
+        double min_command_speed_for_stuck = 0.6; // m/s
+        double safe_disable_distance = 2.5;       // meter
+        int disable_collision_cycles = 40;        // 40 x 100ms = 4s
+        double ignored_bias_decay = 0.8;          // smooth fade to zero while disabled
+    } collision_cfg_;
+
     // Anti Local Minima (Stuck Detection) State
     int stuck_check_counter = 0;
     int ignore_collision_counter = 0;
@@ -200,6 +220,8 @@ private:
     /** @brief PARALLEL TIMERS */
     void state_cycle_callback();
     void collision_avoidance();
+    static double apply_deadband(double value, double deadband);
+    double calculate_repulsive_force(double current_dist, double threshold) const;
 
     /** @brief Update neighbor positions for swarm coordination */
     void neighbors_info_subscriber(const NeighborsInfo::SharedPtr msg);
