@@ -21,16 +21,16 @@ namespace autonomus_utils
                            { return std::abs(func(pos)) <= STOP_THRESHOLD_01; });
     }
 
-    inline std::vector<DLatDLon> all_distances(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors, const px4_msgs::msg::VehicleGlobalPosition &main_position)
+    inline void calculate_all_distances(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors, 
+                                        const px4_msgs::msg::VehicleGlobalPosition &main_position,
+                                        std::vector<DLatDLon> &out_distances)
     {
-        std::vector<DLatDLon> distances;
-        distances.reserve(neighbors.size());
+        out_distances.clear();
         for (const auto &neighbor_pos : neighbors)
         {
-            distances.push_back(geo::calculate_distance<DLatDLon>(main_position.lat, main_position.lon,
-                                                                  neighbor_pos.lat, neighbor_pos.lon));
+            out_distances.push_back(geo::calculate_distance<DLatDLon>(main_position.lat, main_position.lon,
+                                                                      neighbor_pos.lat, neighbor_pos.lon));
         }
-        return distances;
     }
 
     template <typename T>
@@ -39,14 +39,7 @@ namespace autonomus_utils
         return std::clamp<T>(error * gain, -max_vel, max_vel);
     }
 
-    inline std::vector<px4_msgs::msg::VehicleGlobalPosition> combine_positions(
-        const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors,
-        const px4_msgs::msg::VehicleGlobalPosition &main_position)
-    {
-        std::vector<px4_msgs::msg::VehicleGlobalPosition> positions = neighbors;
-        positions.push_back(main_position);
-        return positions;
-    }
+    // combine_positions removed to let callers use pre-allocated vectors
 
     inline px4_msgs::msg::VehicleGlobalPosition find_nearest_vehicle_to_target(
         const std::vector<px4_msgs::msg::VehicleGlobalPosition> &all_positions,

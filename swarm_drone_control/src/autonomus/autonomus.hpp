@@ -23,11 +23,11 @@
 #include <custom_interfaces/msg/target_positions.hpp>
 #include <custom_interfaces/msg/waypoints.hpp>
 #include <custom_interfaces/msg/nav_point.hpp>
+#include <custom_interfaces/msg/in_target.hpp>
 #include "calculations/geographic.hpp"
 #include "calculations/spatial.hpp"
 #include <px4_msgs/msg/trajectory_setpoint.hpp>
 #include <px4_msgs/msg/vehicle_attitude.hpp>
-#include <custom_interfaces/srv/in_target.hpp>
 
 using namespace lifecycle_msgs::msg;
 using namespace px4_msgs::msg;
@@ -35,7 +35,6 @@ using namespace custom_interfaces::msg;
 using namespace std::placeholders;
 using namespace std::chrono_literals;
 using namespace std::chrono;
-using namespace custom_interfaces::srv;
 
 using LifecycleCallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNodeInterface::CallbackReturn;
 
@@ -67,12 +66,18 @@ public:
     SwarmMemberPathPlanner();
 
 private:
+    int sys_id_{1};
+    int total_drones_{3};
+
     rclcpp::Subscription<NeighborsInfo>::SharedPtr neighbors_info_subscription_;
     rclcpp::Subscription<VehicleAttitude>::SharedPtr vehicle_attitude_subscription_;
-
     rclcpp_lifecycle::LifecyclePublisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
-    rclcpp::Service<InTarget>::SharedPtr in_target_service_;
-    rclcpp::Client<InTarget>::SharedPtr in_target_client_;
+    
+    // Target synchronization components
+    rclcpp_lifecycle::LifecyclePublisher<custom_interfaces::msg::InTarget>::SharedPtr in_target_publisher_;
+    std::vector<rclcpp::Subscription<custom_interfaces::msg::InTarget>::SharedPtr> in_target_subs_;
+    std::vector<bool> drones_in_target_;
+
     // Timers
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr timer_2;
@@ -83,6 +88,7 @@ private:
 
     double target_altitude_ = -10.0;
     double current_altitude;
+    const VehicleGlobalPosition* current_wp_ = nullptr;
 
     struct DesiredVelocities
     {
@@ -110,7 +116,11 @@ private:
         VehicleGlobalPosition nearest_vehicle;
         VehicleGlobalPosition circular_position;
         VehicleGlobalPosition target_after_offset;
+        DLatDLon offset_from_cog;
+        double target_bearing_from_cog = 0.0;
     } swarm_positions;
+
+    DLatDLon target_distance_;
 
     rclcpp::CallbackGroup::SharedPtr cb_group;
     rclcpp::CallbackGroup::SharedPtr cb_group_2;
@@ -121,7 +131,12 @@ private:
 
     std::vector<DLatDLon> initial_n_distances;
     std::vector<DLatDLon> current_n_distances;
-    std::vector<InTarget::Request::SharedPtr> positioned_drones_;
+
+    struct CollisionBias
+    {
+        float vlat = 0.0;
+        float vlon = 0.0;
+    } collision_bias;
 
     enum class Mission
     {
@@ -132,45 +147,16 @@ private:
         END_TASK
     } current_mission;
 
-    struct CollisionBias
-    {
-        float vlat = 0.0;
-        float vlon = 0.0;
-    } collision_bias;
-
-    CollisionBias previous_collision_bias_;
-
-    struct CollisionAvoidanceConfig
-    {
-        double min_collision_distance = 1.5;
-        double collision_speed_factor = 0.5;
-        double min_safe_distance = 0.1;
-        double formation_gain = 0.05;
-        double repulsion_gain = 1.0;
-        double deadband_dlat = 2.0;
-        double deadband_dlon = 1.5;
-        double bias_limit = 1.0;
-        int stuck_check_cycles = 20;              // 20 x 100ms = 2s
-        double stuck_movement_threshold = 0.35;   // meter
-        double min_command_speed_for_stuck = 0.6; // m/s
-        double safe_disable_distance = 2.5;       // meter
-        int disable_collision_cycles = 40;        // 40 x 100ms = 4s
-        double ignored_bias_decay = 0.8;          // smooth fade to zero while disabled
-    } collision_cfg_;
-
-    // Anti Local Minima (Stuck Detection) State
-    int stuck_check_counter = 0;
-    int ignore_collision_counter = 0;
-    px4_msgs::msg::VehicleGlobalPosition last_checked_stuck_pos;
-
-    // Test base
     autonomus_utils::WaypointManager waypoint_manager_;
 
     // Lists
-    std::vector<px4_msgs::msg::VehicleGlobalPosition>
-        all_positions;
+    std::vector<px4_msgs::msg::VehicleGlobalPosition> all_positions;
 
-    // Safety Parameters
+    void setup_publishers_and_subscribers();
+    void setup_in_target_subscribers(const rclcpp::QoS &qos);
+    void setup_timers();
+    void reset_timers();
+    void clear_pointers();
 
     /**
      * @brief Send velocity commands to PX4
@@ -202,6 +188,12 @@ private:
     /** @brief Execute formational takeoff mission */
     void formational_takeoff();
 
+    /** @brief Modify commands with collision bias before publishing */
+    void apply_collision_bias();
+
+    /** @brief Update horizontal velocity commands based on target distance */
+    void update_velocity();
+
     /** @brief Execute formational rotation mission */
     void formational_rotation();
 
@@ -220,25 +212,20 @@ private:
     /** @brief PARALLEL TIMERS */
     void state_cycle_callback();
     void collision_avoidance();
-    static double apply_deadband(double value, double deadband);
-    double calculate_repulsive_force(double current_dist, double threshold) const;
 
     /** @brief Update neighbor positions for swarm coordination */
     void neighbors_info_subscriber(const NeighborsInfo::SharedPtr msg);
+
+    /** @brief Check and sync target arrivals */
+    void in_target_callback(const custom_interfaces::msg::InTarget::SharedPtr msg);
+    bool check_all_drones_in_target();
+    void reset_in_target_status();
 
     /** @brief Update vehicle attitude (Euler angles) */
     void vehicle_attitude_subscriber(const VehicleAttitude::SharedPtr msg);
 
     /** @brief Calculate initial values for mission */
     void initial_calculations_before_mission();
-
-    /** @brief Initialize positioned drones vector for synchronization */
-    void initialize_positioned_drones();
-
-    /** @brief In target service callback */
-    void in_target_callback(const InTarget::Request::SharedPtr request, const InTarget::Response::SharedPtr response);
-    void in_target_client_callback(rclcpp::Client<InTarget>::SharedFuture future);
-    void call_in_target_client();
 };
 
 #endif // SWARM_MEMBER_PATH_PLANNER_HPP
