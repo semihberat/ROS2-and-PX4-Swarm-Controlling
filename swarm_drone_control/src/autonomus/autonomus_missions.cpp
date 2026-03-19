@@ -228,7 +228,8 @@ void SwarmMemberPathPlanner::initial_calculations_before_mission()
     swarm_positions.nearest_vehicle = autonomus_utils::find_nearest_vehicle_to_target(
         this->all_positions,
         *current_wp_);
-        
+
+ 
     // 3. Çarpışma önleme veya formasyon koruma için o anki güncel mesafelerin (Snapshot) alınması
     autonomus_utils::calculate_all_distances(
         this->current_neighbors_info_->neighbor_positions, 
@@ -240,7 +241,7 @@ void SwarmMemberPathPlanner::initial_calculations_before_mission()
     {
     case Mission::FORMATIONAL_ROTATION:
     {
-        // Bearing control for THIS DRONE based on entire formation
+        // Bearing control for THIS DRONE based on entire formation 
         swarm_positions.target_bearing_from_cog = autonomus_utils::calculate_target_bearing_for_drone(
             swarm_positions.cog,
             swarm_positions.nearest_vehicle,
