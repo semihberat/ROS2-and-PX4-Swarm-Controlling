@@ -15,5 +15,5 @@ UAVController::UAVController() : rclcpp::Node("uav_controller")
 	this->vehicle_command_publisher_ = this->create_publisher<VehicleCommand>(VEHICLE_COMMAND, 10);
 	this->offboard_setpoint_counter_ = 0;
 
-	timer_ = this->create_wall_timer(100ms, std::bind(&UAVController::timer_callback, this));
+	timer_ = this->create_wall_timer(100ms, [this]() { this->timer_callback(); });
 }

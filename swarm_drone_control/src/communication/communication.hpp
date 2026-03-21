@@ -3,12 +3,9 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <deque>
-#include <px4_msgs/msg/sensor_gps.hpp>
 #include <px4_msgs/msg/vehicle_local_position.hpp>
 #include <px4_msgs/msg/vehicle_global_position.hpp>
-#include <px4_msgs/msg/goto_setpoint.hpp>
 #include <custom_interfaces/msg/neighbors_info.hpp>
-#include <custom_interfaces/msg/target_positions.hpp>
 
 using namespace std::placeholders;
 using namespace std::chrono;
@@ -27,7 +24,6 @@ public:
 private:
     // Publishers and Subscriber callbacks
     rclcpp::Publisher<NeighborsInfo>::SharedPtr neighbors_info_publisher_;
-    rclcpp::Subscription<TargetPositions>::SharedPtr target_position_subscription_;
     rclcpp::Subscription<VehicleGlobalPosition>::SharedPtr vehicle_gps_subscription_;
     rclcpp::Subscription<VehicleLocalPosition>::SharedPtr local_position_subscription_;
 

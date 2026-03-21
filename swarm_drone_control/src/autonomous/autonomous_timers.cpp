@@ -1,4 +1,4 @@
-#include "autonomus.hpp"
+#include "autonomous.hpp"
 
 // Mission state machine - called every 100ms
 void SwarmMemberPathPlanner::state_cycle_callback()

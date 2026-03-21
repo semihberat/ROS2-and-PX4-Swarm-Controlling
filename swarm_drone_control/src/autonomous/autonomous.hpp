@@ -18,12 +18,10 @@
 #include <functional>
 #include "rclcpp_lifecycle/lifecycle_node.hpp"
 #include <px4_msgs/msg/vehicle_global_position.hpp>
-#include <sensor_msgs/msg/nav_sat_fix.hpp>
 #include <custom_interfaces/msg/neighbors_info.hpp>
-#include <custom_interfaces/msg/target_positions.hpp>
 #include <custom_interfaces/msg/waypoints.hpp>
-#include <custom_interfaces/msg/nav_point.hpp>
 #include <custom_interfaces/msg/in_target.hpp>
+#include <custom_interfaces/msg/qr_information.hpp>
 #include "calculations/geographic.hpp"
 #include "calculations/spatial.hpp"
 #include <px4_msgs/msg/trajectory_setpoint.hpp>
@@ -55,7 +53,7 @@ using LifecycleCallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNode
 #define LOG_MISSION(logger, ...) RCLCPP_INFO(logger, COLOR_GREEN __VA_ARGS__ COLOR_RESET)
 #define LOG_SUCCESS(logger, ...) RCLCPP_INFO(logger, COLOR_MAGENTA __VA_ARGS__ COLOR_RESET)
 
-#include "autonomus_utils.hpp"
+#include "autonomous_utils.hpp"
 
 /**
  * @brief Autonomous swarm member that follows formation and executes missions
@@ -74,9 +72,13 @@ private:
     rclcpp_lifecycle::LifecyclePublisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
     
     // Target synchronization components
-    rclcpp_lifecycle::LifecyclePublisher<custom_interfaces::msg::InTarget>::SharedPtr in_target_publisher_;
-    std::vector<rclcpp::Subscription<custom_interfaces::msg::InTarget>::SharedPtr> in_target_subs_;
+    rclcpp_lifecycle::LifecyclePublisher<InTarget>::SharedPtr in_target_publisher_;
+    std::vector<rclcpp::Subscription<InTarget>::SharedPtr> in_target_subs_;
     std::vector<bool> drones_in_target_;
+
+    // QR Information Multi-Subscribing
+    std::vector<rclcpp::Subscription<QRInformation>::SharedPtr> qr_subs_;
+    QRInformation::SharedPtr latest_qr_info_;
 
     // Timers
     rclcpp::TimerBase::SharedPtr timer_;
@@ -113,11 +115,12 @@ private:
     struct SwarmPositions
     {
         VehicleGlobalPosition cog;
-        VehicleGlobalPosition nearest_vehicle;
+        VehicleGlobalPosition leader_vehicle;
         VehicleGlobalPosition circular_position;
         VehicleGlobalPosition target_after_offset;
         DLatDLon offset_from_cog;
         double target_bearing_from_cog = 0.0;
+        uint8_t leader_id = 0;
     } swarm_positions;
 
     DLatDLon target_distance_;
@@ -147,13 +150,14 @@ private:
         END_TASK
     } current_mission;
 
-    autonomus_utils::WaypointManager waypoint_manager_;
+    autonomous_utils::WaypointManager waypoint_manager_;
 
     // Lists
     std::vector<px4_msgs::msg::VehicleGlobalPosition> all_positions;
 
     void setup_publishers_and_subscribers();
     void setup_in_target_subscribers(const rclcpp::QoS &qos);
+    void setup_qr_subscribers(const rclcpp::QoS &qos);
     void setup_timers();
     void reset_timers();
     void clear_pointers();
@@ -217,15 +221,23 @@ private:
     void neighbors_info_subscriber(const NeighborsInfo::SharedPtr msg);
 
     /** @brief Check and sync target arrivals */
-    void in_target_callback(const custom_interfaces::msg::InTarget::SharedPtr msg);
+    void in_target_callback(const InTarget::SharedPtr msg);
     bool check_all_drones_in_target();
     void reset_in_target_status();
+
+    /** @brief Process scanned QR Info from any drone in the swarm */
+    void qr_callback(const QRInformation::SharedPtr msg);
 
     /** @brief Update vehicle attitude (Euler angles) */
     void vehicle_attitude_subscriber(const VehicleAttitude::SharedPtr msg);
 
     /** @brief Calculate initial values for mission */
     void initial_calculations_before_mission();
+    
+    // --- Modular Calculation Functions ---
+    void calculate_swarm_positions();
+    void elect_leader();
+    void calculate_mission_specific_targets();
 };
 
 #endif // SWARM_MEMBER_PATH_PLANNER_HPP

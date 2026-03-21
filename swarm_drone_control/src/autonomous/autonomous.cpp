@@ -1,4 +1,4 @@
-#include "autonomus.hpp"
+#include "autonomous.hpp"
 
 // Lifecycle-managed autonomous path planner for swarm member drones
 
@@ -17,46 +17,63 @@ void SwarmMemberPathPlanner::setup_publishers_and_subscribers()
     std::string neighbors_topic = "/px4_" + std::to_string(sys_id_) + "/neighbors_info";
     this->neighbors_info_subscription_ = this->create_subscription<NeighborsInfo>(
         neighbors_topic, qos,
-        std::bind(&SwarmMemberPathPlanner::neighbors_info_subscriber, this, std::placeholders::_1));
+        [this](const NeighborsInfo::SharedPtr msg) { this->neighbors_info_subscriber(msg); });
 
     std::string attitude_topic = "/px4_" + std::to_string(sys_id_) + "/fmu/out/vehicle_attitude";
     this->vehicle_attitude_subscription_ = this->create_subscription<px4_msgs::msg::VehicleAttitude>(
         attitude_topic, qos,
-        std::bind(&SwarmMemberPathPlanner::vehicle_attitude_subscriber, this, std::placeholders::_1));
+        [this](const px4_msgs::msg::VehicleAttitude::SharedPtr msg) { this->vehicle_attitude_subscriber(msg); });
 
     std::string trajectory_topic = "/px4_" + std::to_string(sys_id_) + "/fmu/in/trajectory_setpoint";
     this->trajectory_setpoint_publisher_ = this->create_publisher<TrajectorySetpoint>(trajectory_topic, 10);
 
     // Multi-Subscribing Synchronization
     std::string in_target_topic = "/px4_" + std::to_string(sys_id_) + "/in_target";
-    this->in_target_publisher_ = this->create_publisher<custom_interfaces::msg::InTarget>(in_target_topic, 10);
+    this->in_target_publisher_ = this->create_publisher<InTarget>(in_target_topic, 10);
 
     setup_in_target_subscribers(qos);
+    setup_qr_subscribers(qos);
 }
 
 // Set up dynamic multi-subscriptions for target synchronization
 void SwarmMemberPathPlanner::setup_in_target_subscribers(const rclcpp::QoS &qos)
 {
+    this->in_target_subs_.reserve(total_drones_ - 1);
     for (int i = 1; i <= total_drones_; ++i)
     {
         if (i != sys_id_)
         {
-            std::string sub_topic = "/px4_" + std::to_string(i) + "/in_target";
-            auto sub = this->create_subscription<custom_interfaces::msg::InTarget>(
-                sub_topic, qos,
-                std::bind(&SwarmMemberPathPlanner::in_target_callback, this, std::placeholders::_1));
-            this->in_target_subs_.push_back(sub);
+            this->in_target_subs_.emplace_back(
+                this->create_subscription<InTarget>(
+                    "/px4_" + std::to_string(i) + "/in_target", qos,
+                    [this](const InTarget::SharedPtr msg) { this->in_target_callback(msg); })
+            );
         }
+    }
+}
+
+// Subscribe to every drone's QR stream in the swarm
+void SwarmMemberPathPlanner::setup_qr_subscribers(const rclcpp::QoS &qos)
+{
+    this->qr_subs_.reserve(total_drones_);
+    for (int i = 1; i <= total_drones_; ++i)
+    {
+        this->qr_subs_.emplace_back(
+            this->create_subscription<QRInformation>(
+                "/drone_" + std::to_string(i) + "/qr_information", qos,
+                [this](const QRInformation::SharedPtr msg) { this->qr_callback(msg); })
+        );
     }
 }
 
 void SwarmMemberPathPlanner::setup_timers()
 {
     this->timer_ = this->create_wall_timer(
-        100ms, std::bind(&SwarmMemberPathPlanner::state_cycle_callback, this));
+        100ms, [this]() { this->state_cycle_callback(); });
     this->timer_->cancel();
 
-    this->timer_2 = this->create_wall_timer(100ms, std::bind(&SwarmMemberPathPlanner::collision_avoidance, this));
+    this->timer_2 = this->create_wall_timer(
+        100ms, [this]() { this->collision_avoidance(); });
     this->timer_2->cancel();
 }
 
@@ -92,6 +109,11 @@ void SwarmMemberPathPlanner::clear_pointers()
         this->in_target_publisher_.reset();
     }
     this->in_target_subs_.clear();
+    
+    this->qr_subs_.clear();
+    if (this->latest_qr_info_) {
+        this->latest_qr_info_.reset();
+    }
 }
 
 LifecycleCallbackReturn SwarmMemberPathPlanner::on_configure(const rclcpp_lifecycle::State &)

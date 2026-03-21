@@ -1,5 +1,5 @@
-#ifndef AUTONOMUS_UTILS_HPP
-#define AUTONOMUS_UTILS_HPP
+#ifndef AUTONOMOUS_UTILS_HPP
+#define AUTONOMOUS_UTILS_HPP
 
 #include <vector>
 #include <cmath>
@@ -8,7 +8,7 @@
 #include <px4_msgs/msg/vehicle_global_position.hpp>
 #include "calculations/geographic.hpp"
 
-namespace autonomus_utils
+namespace autonomous_utils
 {
     constexpr double STOP_THRESHOLD_01 = 0.25;
     constexpr double STOP_THRESHOLD_001 = 0.01;
@@ -41,27 +41,7 @@ namespace autonomus_utils
 
     // combine_positions removed to let callers use pre-allocated vectors
 
-    inline px4_msgs::msg::VehicleGlobalPosition find_nearest_vehicle_to_target(
-        const std::vector<px4_msgs::msg::VehicleGlobalPosition> &all_positions,
-        const px4_msgs::msg::VehicleGlobalPosition &target_waypoint)
-    {
-        if (all_positions.empty())
-            return target_waypoint; // fallback
 
-        px4_msgs::msg::VehicleGlobalPosition nearest = all_positions.front();
-        double min_dist = geo::calculate_distance<DLatDLon>(target_waypoint.lat, target_waypoint.lon, nearest.lat, nearest.lon).distance;
-
-        for (const auto &pos : all_positions)
-        {
-            double dist = geo::calculate_distance<DLatDLon>(target_waypoint.lat, target_waypoint.lon, pos.lat, pos.lon).distance;
-            if (dist < min_dist)
-            {
-                min_dist = dist;
-                nearest = pos;
-            }
-        }
-        return nearest;
-    }
 
     inline double calculate_target_bearing_for_drone(
         const px4_msgs::msg::VehicleGlobalPosition &cog,
@@ -81,13 +61,13 @@ namespace autonomus_utils
     class WaypointManager
     {
     private:
-        custom_interfaces::msg::Waypoints::SharedPtr wp_msg_;
+        Waypoints::SharedPtr wp_msg_;
         int current_index_{0};
 
     public:
         WaypointManager()
         {
-            wp_msg_ = std::make_shared<custom_interfaces::msg::Waypoints>();
+            wp_msg_ = std::make_shared<Waypoints>();
         }
 
         void set_waypoints(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &list)
@@ -134,4 +114,4 @@ namespace autonomus_utils
     };
 }
 
-#endif // AUTONOMUS_UTILS_HPP
+#endif // AUTONOMOUS_UTILS_HPP

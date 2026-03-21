@@ -104,11 +104,20 @@ Robotik sistemlerin çekirdeği (Core framework) inşa edilirken alınan teknolo
 - **Micro-XRCE-DDS:** PX4 tabanlı iletişim standardına ayak uydurmak üzere ROS 2 Humble ile PX4 Firmware arasında köprüleme yapar.
 - **İzolasyon:** Her dronun kendi sistemi sadece "kendisinden" (`TrajectorySetpoint` basmak) ve dışarıdan aldığı komşu pozisyonlarından sorumludur.
 
-### 2.2. Dizin Organizasyonu
-Daha önce iç içe geçmiş olan spagetti kodu, profesyonel bir yapı standartına getirilmiştir:
-- `src/autonomus/`: Tüm temel kararlar bu dizinden çıkar. (Uçuş evreleri, timer'lar ve otonom tepkiler)
-- `include/calculations/`: Salt matematik fonksiyonları sınıfıdır (Haversine, Bearing, Euler to Quaternion).
-- `src/communication/`: DDS ve ağ problemleri, IP atamaları, port eşleştirmeleri ve komşu ağ protokollerini içerir.
+### 2.2. Dizin Organizasyonu (Mevcut Durum ve Yol Haritası)
+Yazılımın temel yapısı fonksiyonlarına göre sınırlandırılmış alt paketlerden (sub-directory) oluşur. Şu anda modüller şunlardır:
+
+- **`src/autonomous/`**: Tüm otonom kararlar (`SwarmMemberPathPlanner`) buradan çıkar. PID hız hesaplamaları, otonom evreler, hedefe gidiş matematiği buradadır. (Önceden *autonomus* yazılmıştı, klasör adı düzeltildi.)
+- **`include/calculations/`**: Coğrafi (`geographic.hpp`) ve uzamsal (`spatial.hpp`) matematik fonksiyonları sınıfıdır (Haversine, Bearing, Euler Dönüşümleri vs.). Tüm header'lar C++ ODR (One Definition Rule) standartlarına göre `.hpp` ve `_impl.hpp` olarak ikiye ayrılıp modülerleştirilmiştir.
+- **`src/communication/`**: Swarm içerisindeki komşu node'ların pozisyon ve DDS ağ haberleşmelerini yönetmek ("NeighborsListener") için dizayn edilmiştir. (An itibariyle queue logic kısımları bulunmakla birlikte ileride O(1) gerçek zamanlı slot tahsisine dönülmesi tavsiye edilir).
+- **`src/controller/`**: (GamepadController) Manuel joy-stick joystick entegrasyonu, swarm ağından bağımsız acil durum müdahalesi sağlar.
+- **`src/ground_control/`**: Yer kontrol istasyonu işlemleri ve state geçişleri (`change_state.cpp`) buradadır. 
+- **`src/uav_controller/`**: Geliştirme sürecinde temel testlerin yapıldığı basit drone offboard modu kontrolleridir.
+
+#### 💡 Eklenmesi ve Silinmesi (Refactor) Gerekenler (Roadmap):
+*   **Ne Eklenmeli?**: Bilgisayarlı Görü ve Hedef Tespiti (`src/object_detection/`) klasörü an itibariyle Workspace'de bulunmamaktadır (veya boştur). YOLO / OpenCV bazlı obje tanıma, kamera (stream) köprüsü (bridge) yapıları buraya otonomi beslemesi olarak eklenebilir.
+*   **Ne Silinmeli/Değişmeli?**: `communication_publishers.cpp` benzeri içi boşaltılmış ya da publish/subscribe amacı kalmamış ara dosyaların `.gitignore` ile beraber `CMakeLists.txt`'den de arındırılıp (şu an sadece declarationları duruyor) silinmesi kodu daha da hafifletecektir.
+*   Tüm `.msg` kütüphanelerinin (`custom_interfaces`) de daha minimal hale gelmesi (`target_positions.msg` veya `nav_point.msg` kullanılmıyorlarsa paketlerden tamamen silinmesi) planlanmalıdır.
 
 ---
 

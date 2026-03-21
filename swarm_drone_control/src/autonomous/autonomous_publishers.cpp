@@ -1,4 +1,4 @@
-#include "autonomus.hpp"
+#include "autonomous.hpp"
 
 /**
  * @brief Send velocity commands to PX4

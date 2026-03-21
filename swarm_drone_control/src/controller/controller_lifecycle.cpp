@@ -23,15 +23,15 @@ LifecycleCallbackReturn GamepadController::on_configure(const rclcpp_lifecycle::
     this->vehicle_command_publisher_ = this->create_publisher<VehicleCommand>(VEHICLE_COMMAND, 10);
 
     this->joy_subscriber_ = this->create_subscription<sensor_msgs::msg::Joy>(
-        "/joy", 10, std::bind(&GamepadController::joystick_callback, this, _1));
+        "/joy", 10, [this](const sensor_msgs::msg::Joy::SharedPtr msg) { this->joystick_callback(msg); });
     this->vehicle_attitude_subscriber_ = this->create_subscription<px4_msgs::msg::VehicleAttitude>(
-        VEHICLE_ATTITUDE, qos, std::bind(&GamepadController::altitude_callback, this, _1));
+        VEHICLE_ATTITUDE, qos, [this](const px4_msgs::msg::VehicleAttitude::SharedPtr msg) { this->altitude_callback(msg); });
     this->vehicle_status_subscriber_ = this->create_subscription<px4_msgs::msg::VehicleStatus>(
-        VEHICLE_STATUS, qos, std::bind(&GamepadController::vehicle_status_callback, this, _1));
+        VEHICLE_STATUS, qos, [this](const px4_msgs::msg::VehicleStatus::SharedPtr msg) { this->vehicle_status_callback(msg); });
 
     this->offboard_setpoint_counter_ = 0;
 
-    this->timer_ = this->create_wall_timer(100ms, std::bind(&GamepadController::controller_callback, this));
+    this->timer_ = this->create_wall_timer(100ms, [this]() { this->controller_callback(); });
     this->timer_->cancel();
 
     return LifecycleCallbackReturn::SUCCESS;

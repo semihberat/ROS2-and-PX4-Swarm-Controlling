@@ -5,13 +5,10 @@
 #include <px4_msgs/msg/offboard_control_mode.hpp>
 #include <px4_msgs/msg/trajectory_setpoint.hpp>
 #include <px4_msgs/msg/vehicle_command.hpp>
-#include <custom_interfaces/msg/neighbors_info.hpp>
-
 using namespace std::placeholders;
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace px4_msgs::msg;
-using namespace custom_interfaces::msg;
 
 /**
  * @brief Simple test controller for basic offboard mode functionality

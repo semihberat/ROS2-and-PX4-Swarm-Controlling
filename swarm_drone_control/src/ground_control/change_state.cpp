@@ -25,7 +25,7 @@ public:
 
         joy_listener = this->create_subscription<Joy>("/joy",
                                                       qos,
-                                                      std::bind(&LifecycleNodeManager::joy_callback, this, _1));
+                                                      [this](const Joy::SharedPtr msg) { this->joy_callback(msg); });
 
         client_path_planner_ = this->create_client<ChangeState>(path_planner_service);
         client_gamepad_ = this->create_client<ChangeState>(gamepad_controller_service);
@@ -46,8 +46,8 @@ public:
             change_state(client_path_planner_, "deactivate", Transition::TRANSITION_DEACTIVATE);
             change_state(client_path_planner_, "cleanup", Transition::TRANSITION_CLEANUP);
 
-            change_state(client_gamepad_, "configure", Transition::TRANSITION_DEACTIVATE);
-            change_state(client_gamepad_, "activate", Transition::TRANSITION_CLEANUP);
+            change_state(client_gamepad_, "configure", Transition::TRANSITION_CONFIGURE);
+            change_state(client_gamepad_, "activate", Transition::TRANSITION_ACTIVATE);
         }
     }
 

@@ -1,8 +1,10 @@
-#include "autonomus.hpp"
+#include "autonomous.hpp"
+#include <map>
+#include <limits>
 
 // TARGET SYNCRONIZATION IMPLEMENTATIONS
 
-void SwarmMemberPathPlanner::in_target_callback(const custom_interfaces::msg::InTarget::SharedPtr msg)
+void SwarmMemberPathPlanner::in_target_callback(const InTarget::SharedPtr msg)
 {
     std::lock_guard<std::mutex> lock(data_mutex_);
     if (msg->in_target) {
@@ -33,11 +35,11 @@ void SwarmMemberPathPlanner::reset_in_target_status()
 void SwarmMemberPathPlanner::formational_takeoff()
 {
     double z_error = current_altitude + current_wp_->alt;
-    current_commands.z_vel = autonomus_utils::calculate_velocity<double>(z_error, desired_velocities.z_vel);
+    current_commands.z_vel = autonomous_utils::calculate_velocity<double>(z_error, desired_velocities.z_vel);
     
-    if (std::abs(z_error) <= autonomus_utils::STOP_THRESHOLD_01)
+    if (std::abs(z_error) <= autonomous_utils::STOP_THRESHOLD_01)
     {
-        custom_interfaces::msg::InTarget msg;
+        InTarget msg;
         msg.drone_id = sys_id_;
         msg.in_target = true;
         in_target_publisher_->publish(msg);
@@ -63,8 +65,8 @@ void SwarmMemberPathPlanner::formational_takeoff()
 // Update basic horizontal velocities based on target distance
 void SwarmMemberPathPlanner::update_velocity()
 {
-    current_commands.v_lat = autonomus_utils::calculate_velocity<double>(this->target_distance_.dlat_meter, desired_velocities.v_lat);
-    current_commands.v_lon = autonomus_utils::calculate_velocity<double>(this->target_distance_.dlon_meter, desired_velocities.v_lon);
+    current_commands.v_lat = autonomous_utils::calculate_velocity<double>(this->target_distance_.dlat_meter, desired_velocities.v_lat);
+    current_commands.v_lon = autonomous_utils::calculate_velocity<double>(this->target_distance_.dlon_meter, desired_velocities.v_lon);
 }
 
 // Rotate formation while maintaining relative positions
@@ -75,12 +77,12 @@ void SwarmMemberPathPlanner::formational_rotation()
                                                swarm_positions.circular_position.lat, swarm_positions.circular_position.lon);
     
     update_velocity();
-    current_commands.yaw_vel = autonomus_utils::calculate_velocity<double>(this->target_distance_.dlat_meter, desired_velocities.yaw_vel);
+    current_commands.yaw_vel = autonomous_utils::calculate_velocity<double>(this->target_distance_.dlat_meter, desired_velocities.yaw_vel);
 
     // Check Neighbors
-    if (std::abs(this->target_distance_.distance) < autonomus_utils::STOP_THRESHOLD_01)
+    if (std::abs(this->target_distance_.distance) < autonomous_utils::STOP_THRESHOLD_01)
     {
-        custom_interfaces::msg::InTarget msg;
+        InTarget msg;
         msg.drone_id = sys_id_;
         msg.in_target = true;
         in_target_publisher_->publish(msg);
@@ -119,14 +121,14 @@ void SwarmMemberPathPlanner::goto_position()
     
     update_velocity();
     current_commands.bearing = geo::calculate_bearing<VehicleGlobalPosition>(this->current_neighbors_info_->main_position, swarm_positions.target_after_offset);
-    current_commands.yaw_vel = autonomus_utils::calculate_velocity<double>(current_commands.bearing, desired_velocities.yaw_vel);
+    current_commands.yaw_vel = autonomous_utils::calculate_velocity<double>(current_commands.bearing, desired_velocities.yaw_vel);
 
     // Collision avoidance modifying speeds
     apply_collision_bias();
 
-    if (std::abs(this->target_distance_.distance) <= autonomus_utils::STOP_THRESHOLD_01)
+    if (std::abs(this->target_distance_.distance) <= autonomous_utils::STOP_THRESHOLD_01)
     {
-        custom_interfaces::msg::InTarget msg;
+        InTarget msg;
         msg.drone_id = sys_id_;
         msg.in_target = true;
         in_target_publisher_->publish(msg);
@@ -211,8 +213,24 @@ void SwarmMemberPathPlanner::initial_calculations_before_mission()
 
     reset_in_target_status();
 
-    // --- ORTAK HESAPLAMALAR (Her Mission geçişinde güncellenmesi gereken taze veriler) ---
-    
+    // 1. Ortak Pozisyonları / Ağırlık Merkezini Hesapla
+    calculate_swarm_positions();
+
+    // 2. Dinamik Sürü Liderini Belirle veya Koru
+    elect_leader();
+
+    // 3. Anlık Mesafe Snapshot'ını Al (Çarpışma önleme referansı)
+    autonomous_utils::calculate_all_distances(
+        this->current_neighbors_info_->neighbor_positions, 
+        this->current_neighbors_info_->main_position,
+        this->initial_n_distances);
+
+    // 4. Spesifik Göreve Yönelik Hesaplamaları Yap
+    calculate_mission_specific_targets();
+}
+
+void SwarmMemberPathPlanner::calculate_swarm_positions()
+{
     // 1. O anki tüm swarm pozisyonları ve güncel ağırlık merkezi (CoG)
     this->all_positions.clear();
     this->all_positions.insert(
@@ -223,28 +241,73 @@ void SwarmMemberPathPlanner::initial_calculations_before_mission()
     this->all_positions.push_back(this->current_neighbors_info_->main_position);
 
     swarm_positions.cog = geo::calculate_cog<VehicleGlobalPosition>(this->all_positions);
+}
 
-    // 2. Hedefe en yakın drone (Lider/Referans tespiti)
-    swarm_positions.nearest_vehicle = autonomus_utils::find_nearest_vehicle_to_target(
-        this->all_positions,
-        *current_wp_);
+void SwarmMemberPathPlanner::elect_leader()
+{
+    // =========================================================================
+    // 2. LEADER SELECTION (Sürü Lideri Seçimi)
+    //
+    // Lider, hedefe en yakın olan drone olarak seçilir ve hedefe ulaşıncaya kadar
+    // (veya sistemden kopana/düşene kadar) liderliğini korur. Tüm rotasyon ve
+    // formasyon işlemleri bu lider referans alınarak gerçekleştirilir.
+    // =========================================================================
 
- 
-    // 3. Çarpışma önleme veya formasyon koruma için o anki güncel mesafelerin (Snapshot) alınması
-    autonomus_utils::calculate_all_distances(
-        this->current_neighbors_info_->neighbor_positions, 
-        this->current_neighbors_info_->main_position,
-        this->initial_n_distances);
+    // Harita oluştur: Drone ID -> Güncel Küresel Pozisyon
+    std::map<uint8_t, VehicleGlobalPosition> id_to_pos_map;
+    id_to_pos_map[this->current_neighbors_info_->main_id] = this->current_neighbors_info_->main_position;
+    
+    for (size_t i = 0; i < this->current_neighbors_info_->neighbor_ids.size(); ++i) {
+        id_to_pos_map[this->current_neighbors_info_->neighbor_ids[i]] = this->current_neighbors_info_->neighbor_positions[i];
+    }
 
+    // Eğer lider daha önce seçilmemişse veya kopmuşsa (artık ağda yoksa), YENİ LİDER SEÇ!
+    if (swarm_positions.leader_id == 0 || id_to_pos_map.find(swarm_positions.leader_id) == id_to_pos_map.end())
+    {
+        double min_dist_to_target = std::numeric_limits<double>::max();
+        uint8_t selected_leader_id = this->current_neighbors_info_->main_id;
+        
+        for (const auto& pair : id_to_pos_map)
+        {
+            uint8_t drone_id = pair.first;
+            const auto& position = pair.second;
+            
+            double dist = geo::calculate_distance<DLatDLon>(position.lat, position.lon, 
+                                                            current_wp_->lat, current_wp_->lon).distance;
+                                                            
+            // En yakın aracı önceliklendir. Eşitlik durumunda daha küçük ID'li drone kazanır (Çelişkiyi önler).
+            if (dist < min_dist_to_target)
+            {
+                min_dist_to_target = dist;
+                selected_leader_id = drone_id;
+            }
+            else if (dist == min_dist_to_target && drone_id < selected_leader_id)
+            {
+                selected_leader_id = drone_id;
+            }
+        }
+        
+        swarm_positions.leader_id = selected_leader_id;
+        RCLCPP_INFO(this->get_logger(), COLOR_GREEN "[LEADER ELECTION] Drone %d is the new SWARM LEADER!" COLOR_RESET, swarm_positions.leader_id);
+    }
+
+    // Dinamik rotasyon ve formasyon hesabında kullanılması için liderin anlık konumunu kaydet
+    swarm_positions.leader_vehicle = id_to_pos_map[swarm_positions.leader_id];
+}
+
+
+
+void SwarmMemberPathPlanner::calculate_mission_specific_targets()
+{
     // --- MISSION (GÖREV) ÖZELİNDEKİ HESAPLAMALAR ---
     switch (this->current_mission)
     {
     case Mission::FORMATIONAL_ROTATION:
     {
-        // Bearing control for THIS DRONE based on entire formation 
-        swarm_positions.target_bearing_from_cog = autonomus_utils::calculate_target_bearing_for_drone(
+        // Bearing control for THIS DRONE based on the Leader's perspective
+        swarm_positions.target_bearing_from_cog = autonomous_utils::calculate_target_bearing_for_drone(
             swarm_positions.cog,
-            swarm_positions.nearest_vehicle,
+            swarm_positions.leader_vehicle,
             *current_wp_,
             this->current_neighbors_info_->main_position);
 

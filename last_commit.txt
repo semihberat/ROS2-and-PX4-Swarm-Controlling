@@ -1,3 +1,44 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:5133b1c0fe0c16064ba673862bde0434eb838af0c88657d2388d55350f4b4a64
-size 7697
+═══════════════════════════════════════════════════════════════════════════
+ SWARM DRONE CONTROL - GELİŞME KAYDI (21 Mart 2026)
+═══════════════════════════════════════════════════════════════════════════
+
+Bu commit, kod tabanını gereksizliklerden arındırmak, performansı artırmak, Github/LFS mimarisini tazelemek ve modülerliği sağlamak için uygulanmıştır.
+
+───────────────────────────────────────────────────────────────────────────
+ 1. MODÜLERLİK VE SPATIAL KÜTÜPHANE AYRIMI
+───────────────────────────────────────────────────────────────────────────
+● `calculations/spatial.hpp` içerisindeki Quaternion ve Euler işlemleri, 
+  modülerleştirilerek declarations ve implementations (uygulama) olarak 
+  ikiye ayrıldı (`spatial_impl.hpp` dosyası oluşturuldu).
+● Tıpkı `geographic.hpp` kütüphanesindeki profesyonel yapıya geçildi.
+
+───────────────────────────────────────────────────────────────────────────
+ 2. BAĞIMLILIK (INCLUDE) VE KOD TEMİZLİĞİ
+───────────────────────────────────────────────────────────────────────────
+● Sistem genelindeki (.hpp ve .cpp dosyaları) tamamen gereksiz include'lar 
+  silindi (`vehicle_control_mode.hpp`, `goto_setpoint.hpp`, vb.).
+● Tanımlanmış ama hedefleri kaldırıldığı için hiçbir işe yaramayan abonelikler
+  ve topic'ler (`target_position_subscription_`) kaldırılarak derleme 
+  (build) hızı ve bellek performansı iyileştirildi. Sadece gerçek kullanılan 
+  topic yapıları korundu.
+
+───────────────────────────────────────────────────────────────────────────
+ 3. MANTIK HATALARININ (BUG) ONARILMASI
+───────────────────────────────────────────────────────────────────────────
+● `change_state.cpp` içerisinde yanlış kurgulanan `TRANSITION_DEACTIVATE` ve 
+  `TRANSITION_CLEANUP` state komutları (configure ve activate durumları için)
+  `TRANSITION_CONFIGURE` ve `TRANSITION_ACTIVATE` olarak düzeltilip mantık 
+  sınırlarına çekildi.
+
+───────────────────────────────────────────────────────────────────────────
+ 4. GITHUB VE LFS (LARGE FILE STORAGE) ENTEGRASYONU
+───────────────────────────────────────────────────────────────────────────
+● Projeye özel sağlam bir `.gitattributes` kurgusu ile derin öğrenme 
+  ağırlıkları (.pt, .onnx, .weights), büyük bag logları (.bag, .db3) ve  
+  medyalar LFS filter şablonuna alındı.
+● Gelişmiş bir `.gitignore` hazırlanarak lokal bağımlı dosyaların (build/, 
+  install/, log/) atılması engellendi. Paydaşların rahatça repoyu çekip 
+  sorunsuz build alabilmesi garantilendi.
+● `CMakeLists.txt` içerisindeki gereksiz/gayrıresmi commentler temizlendi.
+
+═══════════════════════════════════════════════════════════════════════════
