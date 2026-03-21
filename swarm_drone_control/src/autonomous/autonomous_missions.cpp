@@ -7,9 +7,7 @@
 void SwarmMemberPathPlanner::in_target_callback(const InTarget::SharedPtr msg)
 {
     std::lock_guard<std::mutex> lock(data_mutex_);
-    if (msg->in_target) {
-        drones_in_target_[msg->drone_id] = true;
-    }
+    drones_in_target_[msg->drone_id] = msg->in_target;
 }
 
 bool SwarmMemberPathPlanner::check_all_drones_in_target()
@@ -17,9 +15,52 @@ bool SwarmMemberPathPlanner::check_all_drones_in_target()
     std::lock_guard<std::mutex> lock(data_mutex_);
     for (int i = 1; i <= total_drones_; ++i)
     {
-        if (!drones_in_target_[i]) return false;
+        if (!drones_in_target_[i])
+            return false;
     }
     return true;
+}
+
+bool SwarmMemberPathPlanner::verify_in_target_state(double current_error, double target_threshold)
+{
+    double hysteresis_threshold = target_threshold * 3.0; // 0.25 -> 0.75m distance tolerance
+
+    bool currently_in;
+    {
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        currently_in = drones_in_target_[sys_id_];
+    }
+
+    bool is_inside = currently_in;
+
+    if (!currently_in && current_error <= target_threshold)
+    {
+        is_inside = true;
+    }
+    else if (currently_in && current_error > hysteresis_threshold)
+    {
+        is_inside = false;
+    }
+
+    bool state_changed = (is_inside != currently_in);
+
+    // Keep publishing if we are inside to ensure all drones know, or at least publish the change if exiting
+    if (state_changed || is_inside)
+    {
+        InTarget msg;
+        msg.drone_id = sys_id_;
+        msg.in_target = is_inside;
+        in_target_publisher_->publish(msg);
+
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        drones_in_target_[sys_id_] = is_inside;
+    }
+
+    if (is_inside)
+    {
+        return check_all_drones_in_target();
+    }
+    return false;
 }
 
 void SwarmMemberPathPlanner::reset_in_target_status()
@@ -36,24 +77,21 @@ void SwarmMemberPathPlanner::formational_takeoff()
 {
     double z_error = current_altitude + current_wp_->alt;
     current_commands.z_vel = autonomous_utils::calculate_velocity<double>(z_error, desired_velocities.z_vel);
-    
-    if (std::abs(z_error) <= autonomous_utils::STOP_THRESHOLD_01)
-    {
-        InTarget msg;
-        msg.drone_id = sys_id_;
-        msg.in_target = true;
-        in_target_publisher_->publish(msg);
-        
-        {
-            std::lock_guard<std::mutex> lock(data_mutex_);
-            drones_in_target_[sys_id_] = true;
-        }
 
-        if (check_all_drones_in_target())
-        {
-            next_step();
-            return;
-        }
+    if (verify_in_target_state(std::abs(z_error)))
+    {
+        next_step();
+        return;
+    }
+
+    bool local_in_target;
+    {
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        local_in_target = drones_in_target_[sys_id_];
+    }
+
+    if (local_in_target)
+    {
         publish_trajectory_setpoint(0.0, 0.0, 0.0, 0.0);
     }
     else
@@ -73,31 +111,30 @@ void SwarmMemberPathPlanner::update_velocity()
 void SwarmMemberPathPlanner::formational_rotation()
 {
     this->target_distance_ = geo::calculate_distance<DLatDLon>(this->current_neighbors_info_->main_position.lat,
-                                               this->current_neighbors_info_->main_position.lon,
-                                               swarm_positions.circular_position.lat, swarm_positions.circular_position.lon);
-    
+                                                               this->current_neighbors_info_->main_position.lon,
+                                                               swarm_positions.circular_position.lat, swarm_positions.circular_position.lon);
+
     update_velocity();
     current_commands.yaw_vel = autonomous_utils::calculate_velocity<double>(this->target_distance_.dlat_meter, desired_velocities.yaw_vel);
 
-    // Check Neighbors
-    if (std::abs(this->target_distance_.distance) < autonomous_utils::STOP_THRESHOLD_01)
-    {
-        InTarget msg;
-        msg.drone_id = sys_id_;
-        msg.in_target = true;
-        in_target_publisher_->publish(msg);
-        
-        {
-            std::lock_guard<std::mutex> lock(data_mutex_);
-            drones_in_target_[sys_id_] = true;
-        }
+    // Collision avoidance modifying speeds
+    apply_collision_bias();
 
-        if (check_all_drones_in_target())
-        {
-            next_step();
-            return;
-        }
-        
+    // Check Neighbors
+    if (verify_in_target_state(std::abs(this->target_distance_.distance)))
+    {
+        next_step();
+        return;
+    }
+
+    bool local_in_target;
+    {
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        local_in_target = drones_in_target_[sys_id_];
+    }
+
+    if (local_in_target)
+    {
         // Wait gracefully
         publish_trajectory_setpoint(0.0, 0.0, 0.0, 0.0);
         return;
@@ -106,19 +143,14 @@ void SwarmMemberPathPlanner::formational_rotation()
 }
 
 // Apply computed collision avoidance bias to final target velocities
-void SwarmMemberPathPlanner::apply_collision_bias()
-{
-    current_commands.v_lat += collision_bias.vlat;
-    current_commands.v_lon += collision_bias.vlon;
-}
 
 // Navigate to target position
 void SwarmMemberPathPlanner::goto_position()
 {
     this->target_distance_ = geo::calculate_distance<DLatDLon>(this->current_neighbors_info_->main_position.lat,
-                                               this->current_neighbors_info_->main_position.lon,
-                                               swarm_positions.target_after_offset.lat, swarm_positions.target_after_offset.lon);
-    
+                                                               this->current_neighbors_info_->main_position.lon,
+                                                               swarm_positions.target_after_offset.lat, swarm_positions.target_after_offset.lon);
+
     update_velocity();
     current_commands.bearing = geo::calculate_bearing<VehicleGlobalPosition>(this->current_neighbors_info_->main_position, swarm_positions.target_after_offset);
     current_commands.yaw_vel = autonomous_utils::calculate_velocity<double>(current_commands.bearing, desired_velocities.yaw_vel);
@@ -126,24 +158,21 @@ void SwarmMemberPathPlanner::goto_position()
     // Collision avoidance modifying speeds
     apply_collision_bias();
 
-    if (std::abs(this->target_distance_.distance) <= autonomous_utils::STOP_THRESHOLD_01)
+    if (verify_in_target_state(std::abs(this->target_distance_.distance)))
     {
-        InTarget msg;
-        msg.drone_id = sys_id_;
-        msg.in_target = true;
-        in_target_publisher_->publish(msg);
-        
-        {
-            std::lock_guard<std::mutex> lock(data_mutex_);
-            drones_in_target_[sys_id_] = true;
-        }
+        publish_trajectory_setpoint(0.0, 0.0, 0.0, 0.0); // Stop at target
+        next_step();
+        return;
+    }
 
-        if (check_all_drones_in_target())
-        {
-            next_step();
-            return;
-        }
-        
+    bool local_in_target;
+    {
+        std::lock_guard<std::mutex> lock(data_mutex_);
+        local_in_target = drones_in_target_[sys_id_];
+    }
+
+    if (local_in_target)
+    {
         // Wait gracefully
         publish_trajectory_setpoint(0.0, 0.0, 0.0, 0.0);
         return;
@@ -164,6 +193,7 @@ void SwarmMemberPathPlanner::end_task()
 
 void SwarmMemberPathPlanner::next_step()
 {
+    this->latest_qr_info_ = nullptr;
     // 1. Advance mission state
     switch (this->current_mission)
     {
@@ -180,16 +210,10 @@ void SwarmMemberPathPlanner::next_step()
     case Mission::GOTO_POSITION:
         // Hedefe ulaşıldı, bir sonraki waypoint'e geç
         current_wp_ = waypoint_manager_.next();
-        if (current_wp_)
-        {
-            this->current_mission = Mission::FORMATIONAL_ROTATION;
-            LOG_MISSION(this->get_logger(), "[MISSION INFO] -> FORMATIONAL_ROTATION (Next Waypoint)");
-        }
-        else
-        {
-            this->current_mission = Mission::DO_PROCESS;
-            LOG_MISSION(this->get_logger(), "[MISSION INFO] -> DO_PROCESS");
-        }
+
+        this->current_mission = Mission::FORMATIONAL_ROTATION;
+        LOG_MISSION(this->get_logger(), "[MISSION INFO] -> FORMATIONAL_ROTATION (Next Waypoint)");
+
         break;
 
     case Mission::DO_PROCESS:
@@ -221,7 +245,7 @@ void SwarmMemberPathPlanner::initial_calculations_before_mission()
 
     // 3. Anlık Mesafe Snapshot'ını Al (Çarpışma önleme referansı)
     autonomous_utils::calculate_all_distances(
-        this->current_neighbors_info_->neighbor_positions, 
+        this->current_neighbors_info_->neighbor_positions,
         this->current_neighbors_info_->main_position,
         this->initial_n_distances);
 
@@ -236,8 +260,7 @@ void SwarmMemberPathPlanner::calculate_swarm_positions()
     this->all_positions.insert(
         this->all_positions.end(),
         this->current_neighbors_info_->neighbor_positions.begin(),
-        this->current_neighbors_info_->neighbor_positions.end()
-    );
+        this->current_neighbors_info_->neighbor_positions.end());
     this->all_positions.push_back(this->current_neighbors_info_->main_position);
 
     swarm_positions.cog = geo::calculate_cog<VehicleGlobalPosition>(this->all_positions);
@@ -256,8 +279,9 @@ void SwarmMemberPathPlanner::elect_leader()
     // Harita oluştur: Drone ID -> Güncel Küresel Pozisyon
     std::map<uint8_t, VehicleGlobalPosition> id_to_pos_map;
     id_to_pos_map[this->current_neighbors_info_->main_id] = this->current_neighbors_info_->main_position;
-    
-    for (size_t i = 0; i < this->current_neighbors_info_->neighbor_ids.size(); ++i) {
+
+    for (size_t i = 0; i < this->current_neighbors_info_->neighbor_ids.size(); ++i)
+    {
         id_to_pos_map[this->current_neighbors_info_->neighbor_ids[i]] = this->current_neighbors_info_->neighbor_positions[i];
     }
 
@@ -266,15 +290,16 @@ void SwarmMemberPathPlanner::elect_leader()
     {
         double min_dist_to_target = std::numeric_limits<double>::max();
         uint8_t selected_leader_id = this->current_neighbors_info_->main_id;
-        
-        for (const auto& pair : id_to_pos_map)
+
+        for (const auto &pair : id_to_pos_map)
         {
             uint8_t drone_id = pair.first;
-            const auto& position = pair.second;
-            
-            double dist = geo::calculate_distance<DLatDLon>(position.lat, position.lon, 
-                                                            current_wp_->lat, current_wp_->lon).distance;
-                                                            
+            const auto &position = pair.second;
+
+            double dist = geo::calculate_distance<DLatDLon>(position.lat, position.lon,
+                                                            current_wp_->lat, current_wp_->lon)
+                              .distance;
+
             // En yakın aracı önceliklendir. Eşitlik durumunda daha küçük ID'li drone kazanır (Çelişkiyi önler).
             if (dist < min_dist_to_target)
             {
@@ -286,7 +311,7 @@ void SwarmMemberPathPlanner::elect_leader()
                 selected_leader_id = drone_id;
             }
         }
-        
+
         swarm_positions.leader_id = selected_leader_id;
         RCLCPP_INFO(this->get_logger(), COLOR_GREEN "[LEADER ELECTION] Drone %d is the new SWARM LEADER!" COLOR_RESET, swarm_positions.leader_id);
     }
@@ -294,8 +319,6 @@ void SwarmMemberPathPlanner::elect_leader()
     // Dinamik rotasyon ve formasyon hesabında kullanılması için liderin anlık konumunu kaydet
     swarm_positions.leader_vehicle = id_to_pos_map[swarm_positions.leader_id];
 }
-
-
 
 void SwarmMemberPathPlanner::calculate_mission_specific_targets()
 {
@@ -322,15 +345,15 @@ void SwarmMemberPathPlanner::calculate_mission_specific_targets()
     case Mission::GOTO_POSITION:
     {
         swarm_positions.offset_from_cog = geo::calculate_distance<DLatDLon>(swarm_positions.cog.lat, swarm_positions.cog.lon,
-                                                                 this->current_neighbors_info_->main_position.lat,
-                                                                 this->current_neighbors_info_->main_position.lon);
+                                                                            this->current_neighbors_info_->main_position.lat,
+                                                                            this->current_neighbors_info_->main_position.lon);
 
         auto offset_result = geo::calculate_offsets<VehicleGlobalPosition>(*current_wp_,
-                                                                                            swarm_positions.offset_from_cog.dlat_meter, swarm_positions.offset_from_cog.dlon_meter, 1)[0];
+                                                                           swarm_positions.offset_from_cog.dlat_meter, swarm_positions.offset_from_cog.dlon_meter, 1)[0];
         swarm_positions.target_after_offset = offset_result;
         break;
     }
-    
+
     default:
         break;
     }

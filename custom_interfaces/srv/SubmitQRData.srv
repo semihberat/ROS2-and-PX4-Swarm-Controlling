@@ -1,0 +1,7 @@
+# Request - QR Information from client
+QRInformation qr_info
+
+---
+# Response - Acknowledgement
+bool success          # True if data was received and processed successfully
+string message        # Additional information or error message

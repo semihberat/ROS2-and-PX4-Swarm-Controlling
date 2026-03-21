@@ -21,7 +21,7 @@ namespace autonomous_utils
                            { return std::abs(func(pos)) <= STOP_THRESHOLD_01; });
     }
 
-    inline void calculate_all_distances(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors, 
+    inline void calculate_all_distances(const std::vector<px4_msgs::msg::VehicleGlobalPosition> &neighbors,
                                         const px4_msgs::msg::VehicleGlobalPosition &main_position,
                                         std::vector<DLatDLon> &out_distances)
     {
@@ -40,8 +40,6 @@ namespace autonomous_utils
     }
 
     // combine_positions removed to let callers use pre-allocated vectors
-
-
 
     inline double calculate_target_bearing_for_drone(
         const px4_msgs::msg::VehicleGlobalPosition &cog,
@@ -110,6 +108,16 @@ namespace autonomous_utils
         void reset()
         {
             current_index_ = 0;
+        }
+
+        const px4_msgs::msg::VehicleGlobalPosition *jump_to(int index)
+        {
+            if (wp_msg_ && index >= 0 && index < static_cast<int>(wp_msg_->waypoints.size()))
+            {
+                current_index_ = index;
+                return current();
+            }
+            return nullptr;
         }
     };
 }

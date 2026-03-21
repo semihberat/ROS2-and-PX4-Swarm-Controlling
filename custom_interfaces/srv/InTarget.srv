@@ -1,0 +1,5 @@
+uint8 drone_id
+bool is_in_position
+---
+bool success          # True if data was received and processed successfully
+string message        # Additional information or error message

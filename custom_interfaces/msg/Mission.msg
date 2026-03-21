@@ -1,0 +1,4 @@
+Formation formasyon
+PitchRollMovement manevra_pitch_roll
+AltitudeChange irtifa_degisim
+uint8 bekleme_suresi_s

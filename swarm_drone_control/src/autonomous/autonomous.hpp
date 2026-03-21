@@ -70,7 +70,7 @@ private:
     rclcpp::Subscription<NeighborsInfo>::SharedPtr neighbors_info_subscription_;
     rclcpp::Subscription<VehicleAttitude>::SharedPtr vehicle_attitude_subscription_;
     rclcpp_lifecycle::LifecyclePublisher<TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
-    
+
     // Target synchronization components
     rclcpp_lifecycle::LifecyclePublisher<InTarget>::SharedPtr in_target_publisher_;
     std::vector<rclcpp::Subscription<InTarget>::SharedPtr> in_target_subs_;
@@ -90,13 +90,13 @@ private:
 
     double target_altitude_ = -10.0;
     double current_altitude;
-    const VehicleGlobalPosition* current_wp_ = nullptr;
+    const VehicleGlobalPosition *current_wp_ = nullptr;
 
     struct DesiredVelocities
     {
         float vel = 2.0;
         float z_vel = 2.0;
-        float yaw_vel = 0.5;
+        float yaw_vel = 1.0;
         float v_lat = 2.0;
         float v_lon = 2.0;
     } desired_velocities;
@@ -134,6 +134,16 @@ private:
 
     std::vector<DLatDLon> initial_n_distances;
     std::vector<DLatDLon> current_n_distances;
+
+    struct CollisionAvoidanceParams
+    {
+        float k_repulsive = 1.5f;    // Güçlü itki (çarpışmayı kesin önlemek için)
+        float k_attractive = 0.5f;   // Yumuşak çekiş (formasyondan kopmamak için)
+        float k_vortex = 1.0f;       // Türbülans/Teğet kuvveti
+        float safe_threshold = 0.4f; // Tolerans bandı (+/- 0.4 metre)
+        float max_bias = 2.0f;       // Maksimum etki (hız limiti sapması)
+        float filter_alpha = 0.7f;   // Low-pass filtre yumuşatması (0.7 eski, 0.3 yeni)
+    } col_avoid_params;
 
     struct CollisionBias
     {
@@ -223,6 +233,7 @@ private:
     /** @brief Check and sync target arrivals */
     void in_target_callback(const InTarget::SharedPtr msg);
     bool check_all_drones_in_target();
+    bool verify_in_target_state(double current_error, double target_threshold = autonomous_utils::STOP_THRESHOLD_01);
     void reset_in_target_status();
 
     /** @brief Process scanned QR Info from any drone in the swarm */
@@ -233,7 +244,7 @@ private:
 
     /** @brief Calculate initial values for mission */
     void initial_calculations_before_mission();
-    
+
     // --- Modular Calculation Functions ---
     void calculate_swarm_positions();
     void elect_leader();

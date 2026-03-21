@@ -6,6 +6,11 @@ void SwarmMemberPathPlanner::state_cycle_callback()
     if (!current_neighbors_info_ || !current_wp_)
         return;
 
+    if (this->latest_qr_info_)
+    {
+        this->current_mission = Mission::DO_PROCESS;
+    }
+
     switch (this->current_mission)
     {
     case Mission::FORMATIONAL_TAKEOFF:
@@ -24,9 +29,4 @@ void SwarmMemberPathPlanner::state_cycle_callback()
         end_task();
         break;
     }
-}
-
-void SwarmMemberPathPlanner::collision_avoidance()
-{
-    // Empty collision avoidance callback for later implementation
 }
