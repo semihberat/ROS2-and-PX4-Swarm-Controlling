@@ -1,44 +1,27 @@
 ═══════════════════════════════════════════════════════════════════════════
- SWARM DRONE CONTROL - GELİŞME KAYDI (21 Mart 2026)
+ SWARM DRONE CONTROL - GELİŞME KAYDI (23 Mart 2026)
 ═══════════════════════════════════════════════════════════════════════════
 
-Bu commit, kod tabanını gereksizliklerden arındırmak, performansı artırmak, Github/LFS mimarisini tazelemek ve modülerliği sağlamak için uygulanmıştır.
+Bu commit ile do_process mantığı genişletilerek QR kodu üzerinden veya dışarıdan gelen görev komutlarıyla çalışan dinamik manevra ve sıralı görev sistemi entegre edilmiştir.
 
 ───────────────────────────────────────────────────────────────────────────
- 1. MODÜLERLİK VE SPATIAL KÜTÜPHANE AYRIMI
+ 1. OTONOM GÖREV YÖNETİMİ (DO_PROCESS DİNAMİKLERİ)
 ───────────────────────────────────────────────────────────────────────────
-● `calculations/spatial.hpp` içerisindeki Quaternion ve Euler işlemleri, 
-  modülerleştirilerek declarations ve implementations (uygulama) olarak 
-  ikiye ayrıldı (`spatial_impl.hpp` dosyası oluşturuldu).
-● Tıpkı `geographic.hpp` kütüphanesindeki profesyonel yapıya geçildi.
+● `autonomous_processes.cpp` dosyası içerisinde `do_process` metodu 
+  koşullu (switch-case) mimariye dönüştürüldü.
+● QR verisi (`latest_qr_info_`) ile gelen görev sıralaması baz alınarak 
+  dinamik görev aktarımı sağlandı.
 
 ───────────────────────────────────────────────────────────────────────────
- 2. BAĞIMLILIK (INCLUDE) VE KOD TEMİZLİĞİ
+ 2. EKLENEN YENİ MANEVRA KALIPLARI
 ───────────────────────────────────────────────────────────────────────────
-● Sistem genelindeki (.hpp ve .cpp dosyaları) tamamen gereksiz include'lar 
-  silindi (`vehicle_control_mode.hpp`, `goto_setpoint.hpp`, vb.).
-● Tanımlanmış ama hedefleri kaldırıldığı için hiçbir işe yaramayan abonelikler
-  ve topic'ler (`target_position_subscription_`) kaldırılarak derleme 
-  (build) hızı ve bellek performansı iyileştirildi. Sadece gerçek kullanılan 
-  topic yapıları korundu.
-
-───────────────────────────────────────────────────────────────────────────
- 3. MANTIK HATALARININ (BUG) ONARILMASI
-───────────────────────────────────────────────────────────────────────────
-● `change_state.cpp` içerisinde yanlış kurgulanan `TRANSITION_DEACTIVATE` ve 
-  `TRANSITION_CLEANUP` state komutları (configure ve activate durumları için)
-  `TRANSITION_CONFIGURE` ve `TRANSITION_ACTIVATE` olarak düzeltilip mantık 
-  sınırlarına çekildi.
-
-───────────────────────────────────────────────────────────────────────────
- 4. GITHUB VE LFS (LARGE FILE STORAGE) ENTEGRASYONU
-───────────────────────────────────────────────────────────────────────────
-● Projeye özel sağlam bir `.gitattributes` kurgusu ile derin öğrenme 
-  ağırlıkları (.pt, .onnx, .weights), büyük bag logları (.bag, .db3) ve  
-  medyalar LFS filter şablonuna alındı.
-● Gelişmiş bir `.gitignore` hazırlanarak lokal bağımlı dosyaların (build/, 
-  install/, log/) atılması engellendi. Paydaşların rahatça repoyu çekip 
-  sorunsuz build alabilmesi garantilendi.
-● `CMakeLists.txt` içerisindeki gereksiz/gayrıresmi commentler temizlendi.
+Sürünün waypoint (hedef) üzerine ulaştıktan sonra yapabileceği yeni görev 
+dinamikleri eklendi:
+● Formation (Formasyon oluşturma / şekil dizilimi)
+● Pitch/Roll Maneuver (Sağ-sol veya ileri-geri dinamik hareketler)
+● Altitude Change (Hızlı irtifa değişimi)
+● Leave The Swarm (Sürüden ayrılma manevrası)
+Görevlerin aktiflik durumlarına göre ardışık işlenmesi (Next) ve bittikten 
+sonra başarılı bir şekilde görevin sonlandırılması (End Task) eklendi.
 
 ═══════════════════════════════════════════════════════════════════════════

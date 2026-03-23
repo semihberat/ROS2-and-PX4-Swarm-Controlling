@@ -1,4 +1,0 @@
-[01m[K/home/semih/ws_offboard_control/src/swarm_drone_control/src/controller/controller_publishers.cpp:[m[K In member function ‘[01m[Kvoid GamepadController::relative_movement(float, float, float, float)[m[K’:
-[01m[K/home/semih/ws_offboard_control/src/swarm_drone_control/src/controller/controller_publishers.cpp:63:16:[m[K [01;35m[Kwarning: [m[Kunused variable ‘[01m[Kcohesion_gain[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-variable-Wunused-variable]8;;[m[K]
-   63 |         double [01;35m[Kcohesion_gain[m[K = 0.5; // adjust as necessary
-      |                [01;35m[K^~~~~~~~~~~~~[m[K

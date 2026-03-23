@@ -95,7 +95,11 @@ Sistemin beyni, 100 milisaniyede (10Hz) bir koşan asenkron `state_cycle_callbac
 * `FORMATIONAL_TAKEOFF`: Uçuş İzinlerinin alınması, Senkronize irtifa kazanımı.
 * `FORMATIONAL_ROTATION`: İHA'ların hedef noktaya yönelmeleri, Yaw hizalamaları ve "Go-To" öncesi formasyon dizilimi (`ALIGN_YAW`).
 * `GOTO_POSITION`: Ortak ulaşılan Waypoint rotasına çarpışma önleyici açık şekilde sürünün akması.
-* `DO_PROCESS`: Waypoint üzerinde görev yapılması (QR okuma, Tarama, Faydalı Yük Bırakma vb.).
+* `DO_PROCESS`: Waypoint üzerinde hedeflenen süreçlerin (QR / Faydalı Yük vb.) gerçekleştirilmesi. Alınan görev paketlerine göre otonom manevralar icra edilir:
+  * **Formation:** Belirlenen formasyon dizilimine girilmesi.
+  * **Maneuver Pitch/Roll:** İHA özelinde otonom gövde yatış/kalkış manevraları.
+  * **Altitude Change:** İstenen hedef irtifaya hızlı ulaşıp inme/çıkma süreçleri.
+  * **Leave The Swarm:** Tanımlı İHA'nın sürüden otonom bir şekilde ayrılması.
 * `END_TASK`: İniş ve görev bitimi.
 
 ---

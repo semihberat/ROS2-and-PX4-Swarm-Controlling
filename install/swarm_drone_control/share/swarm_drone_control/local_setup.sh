@@ -1,1 +1,0 @@
-/home/semih/ws_offboard_control/src/build/swarm_drone_control/ament_cmake_environment_hooks/local_setup.sh

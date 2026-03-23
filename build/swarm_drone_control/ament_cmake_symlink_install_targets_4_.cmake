@@ -1,1 +1,0 @@
-ament_cmake_symlink_install_targets("TARGET_FILES" "/home/semih/ws_offboard_control/src/build/swarm_drone_control/gamepad_controller" "TARGETS" "gamepad_controller" "DESTINATION" "lib/swarm_drone_control")

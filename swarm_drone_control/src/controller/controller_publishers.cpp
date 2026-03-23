@@ -91,6 +91,33 @@ void GamepadController::relative_movement(float velocity_x, float velocity_y, fl
                 velocity_east += repulsion_force * std::sin(bearing_from_neighbor);
             }
         }
+
+        // --- Yaw Alignment (Consensus) ---
+        // Steer yaw towards the average yaw of the neighbors to prevent drift
+        if (!this->current_neighbors_info_->neighbor_yaws.empty())
+        {
+            float yaw_sum = yaw_angle; // Start with own yaw
+            float sin_sum = std::sin(yaw_angle);
+            float cos_sum = std::cos(yaw_angle);
+
+            for (float nyaw : this->current_neighbors_info_->neighbor_yaws)
+            {
+                sin_sum += std::sin(nyaw);
+                cos_sum += std::cos(nyaw);
+            }
+
+            float avg_yaw = std::atan2(sin_sum, cos_sum);
+            float yaw_error = avg_yaw - yaw_angle;
+
+            // Normalize error to [-pi, pi]
+            while (yaw_error > geo::PI_VAL)
+                yaw_error -= 2.0f * geo::PI_VAL;
+            while (yaw_error < -geo::PI_VAL)
+                yaw_error += 2.0f * geo::PI_VAL;
+
+            float yaw_alignment_gain = 0.5f;
+            yawspeed += yaw_error * yaw_alignment_gain;
+        }
     }
 
     this->publish_trajectory_setpoint(velocity_north, velocity_east, velocity_z, yawspeed);

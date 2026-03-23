@@ -1,1 +1,0 @@
-ament_cmake_symlink_install_targets("TARGET_FILES" "/home/semih/ws_offboard_control/src/build/swarm_drone_control/swarm_communication" "TARGETS" "swarm_communication" "DESTINATION" "lib/swarm_drone_control")

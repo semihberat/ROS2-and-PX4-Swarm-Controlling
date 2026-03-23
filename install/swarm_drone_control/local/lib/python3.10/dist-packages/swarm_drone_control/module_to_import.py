@@ -1,1 +1,0 @@
-/home/semih/ws_offboard_control/src/swarm_drone_control/swarm_drone_control/module_to_import.py

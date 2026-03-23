@@ -132,11 +132,7 @@ private:
     // Neighbors info
     NeighborsInfo::SharedPtr current_neighbors_info_;
     spatial::EulerAngles current_euler_angles_;
-    
-    // Mission context
-    bool home_position_stored = false;
-    VehicleGlobalPosition initial_home_pos_;
-    
+
     std::vector<DLatDLon> initial_n_distances;
     std::vector<DLatDLon> current_n_distances;
 
@@ -235,7 +231,7 @@ private:
     void end_task();
 
     /** @brief Advance to next mission step */
-    void next_step();
+    void next_step(Mission next_mission);
 
     /** @brief PARALLEL TIMERS */
     void state_cycle_callback();
