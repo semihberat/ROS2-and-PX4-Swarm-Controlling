@@ -1,0 +1,7 @@
+setup.py
+swarm_drone_control/__init__.py
+swarm_drone_control/module_to_import.py
+swarm_drone_control.egg-info/PKG-INFO
+swarm_drone_control.egg-info/SOURCES.txt
+swarm_drone_control.egg-info/dependency_links.txt
+swarm_drone_control.egg-info/top_level.txt

@@ -17,12 +17,14 @@ void SwarmMemberPathPlanner::setup_publishers_and_subscribers()
     std::string neighbors_topic = "/px4_" + std::to_string(sys_id_) + "/neighbors_info";
     this->neighbors_info_subscription_ = this->create_subscription<NeighborsInfo>(
         neighbors_topic, qos,
-        [this](const NeighborsInfo::SharedPtr msg) { this->neighbors_info_subscriber(msg); });
+        [this](const NeighborsInfo::SharedPtr msg)
+        { this->neighbors_info_subscriber(msg); });
 
     std::string attitude_topic = "/px4_" + std::to_string(sys_id_) + "/fmu/out/vehicle_attitude";
     this->vehicle_attitude_subscription_ = this->create_subscription<px4_msgs::msg::VehicleAttitude>(
         attitude_topic, qos,
-        [this](const px4_msgs::msg::VehicleAttitude::SharedPtr msg) { this->vehicle_attitude_subscriber(msg); });
+        [this](const px4_msgs::msg::VehicleAttitude::SharedPtr msg)
+        { this->vehicle_attitude_subscriber(msg); });
 
     std::string trajectory_topic = "/px4_" + std::to_string(sys_id_) + "/fmu/in/trajectory_setpoint";
     this->trajectory_setpoint_publisher_ = this->create_publisher<TrajectorySetpoint>(trajectory_topic, 10);
@@ -46,8 +48,8 @@ void SwarmMemberPathPlanner::setup_in_target_subscribers(const rclcpp::QoS &qos)
             this->in_target_subs_.emplace_back(
                 this->create_subscription<InTarget>(
                     "/px4_" + std::to_string(i) + "/in_target", qos,
-                    [this](const InTarget::SharedPtr msg) { this->in_target_callback(msg); })
-            );
+                    [this](const InTarget::SharedPtr msg)
+                    { this->in_target_callback(msg); }));
         }
     }
 }
@@ -61,19 +63,21 @@ void SwarmMemberPathPlanner::setup_qr_subscribers(const rclcpp::QoS &qos)
         this->qr_subs_.emplace_back(
             this->create_subscription<QRInformation>(
                 "/drone_" + std::to_string(i) + "/qr_information", qos,
-                [this](const QRInformation::SharedPtr msg) { this->qr_callback(msg); })
-        );
+                [this](const QRInformation::SharedPtr msg)
+                { this->qr_callback(msg); }));
     }
 }
 
 void SwarmMemberPathPlanner::setup_timers()
 {
     this->timer_ = this->create_wall_timer(
-        100ms, [this]() { this->state_cycle_callback(); });
+        100ms, [this]()
+        { this->state_cycle_callback(); });
     this->timer_->cancel();
 
     this->timer_2 = this->create_wall_timer(
-        100ms, [this]() { this->collision_avoidance(); });
+        100ms, [this]()
+        { this->collision_avoidance(); });
     this->timer_2->cancel();
 }
 
@@ -104,14 +108,16 @@ void SwarmMemberPathPlanner::clear_pointers()
     this->trajectory_setpoint_publisher_.reset();
     this->neighbors_info_subscription_.reset();
     this->vehicle_attitude_subscription_.reset();
-    
-    if (this->in_target_publisher_) {
+
+    if (this->in_target_publisher_)
+    {
         this->in_target_publisher_.reset();
     }
     this->in_target_subs_.clear();
-    
+
     this->qr_subs_.clear();
-    if (this->latest_qr_info_) {
+    if (this->latest_qr_info_)
+    {
         this->latest_qr_info_.reset();
     }
 }
@@ -125,11 +131,23 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_configure(const rclcpp_lifecy
 
     this->drones_in_target_.assign(this->total_drones_ + 1, false);
 
+    // Initial position placeholder (Ideally wait for actual data, but this provides a starting point)
+    VehicleGlobalPosition initial_pos;
+    if (this->current_neighbors_info_)
+    {
+        initial_pos = this->current_neighbors_info_->main_position;
+        initial_pos.alt = target_altitude_;
+    }
+
     // Instantiate resources, allocate memory
     std::vector<VehicleGlobalPosition> test_waypoints;
     test_waypoints.push_back(VehicleGlobalPosition().set__lat(47.397986).set__lon(8.546056).set__alt(target_altitude_));
     test_waypoints.push_back(VehicleGlobalPosition().set__lat(47.398186).set__lon(8.546056).set__alt(target_altitude_));
     test_waypoints.push_back(VehicleGlobalPosition().set__lat(47.398186).set__lon(8.546256).set__alt(target_altitude_));
+
+    // Add start position to end of path
+    test_waypoints.push_back(initial_pos);
+
     this->waypoint_manager_.set_waypoints(test_waypoints);
 
     setup_publishers_and_subscribers();
@@ -144,12 +162,12 @@ LifecycleCallbackReturn SwarmMemberPathPlanner::on_activate(const rclcpp_lifecyc
 
     this->trajectory_setpoint_publisher_->on_activate();
     this->in_target_publisher_->on_activate();
-    
+
     // Resume or restart mission state logic
     this->waypoint_manager_.reset(); // restart from beginning
     this->current_wp_ = waypoint_manager_.current();
     this->current_mission = Mission::FORMATIONAL_TAKEOFF;
-    
+
     reset_timers();
     reset_in_target_status();
 

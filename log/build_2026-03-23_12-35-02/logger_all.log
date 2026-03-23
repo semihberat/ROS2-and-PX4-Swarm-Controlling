@@ -1,0 +1,163 @@
+[0.131s] DEBUG:colcon:Command line arguments: ['/usr/bin/colcon', 'build', '--packages-select', 'swarm_drone_control']
+[0.131s] DEBUG:colcon:Parsed command line arguments: Namespace(log_base=None, log_level=None, verb_name='build', build_base='build', install_base='install', merge_install=False, symlink_install=False, test_result_base=None, continue_on_error=False, executor='parallel', parallel_workers=16, event_handlers=None, ignore_user_meta=False, metas=['./colcon.meta'], base_paths=['.'], packages_ignore=None, packages_ignore_regex=None, paths=None, packages_up_to=None, packages_up_to_regex=None, packages_above=None, packages_above_and_dependencies=None, packages_above_depth=None, packages_select_by_dep=None, packages_skip_by_dep=None, packages_skip_up_to=None, packages_select_build_failed=False, packages_skip_build_finished=False, packages_select_test_failures=False, packages_skip_test_passed=False, packages_select=['swarm_drone_control'], packages_skip=None, packages_select_regex=None, packages_skip_regex=None, packages_start=None, packages_end=None, allow_overriding=[], cmake_args=None, cmake_target=None, cmake_target_skip_unavailable=False, cmake_clean_cache=False, cmake_clean_first=False, cmake_force_configure=False, ament_cmake_args=None, catkin_cmake_args=None, catkin_skip_building_tests=False, mixin_files=None, mixin=None, verb_parser=<colcon_mixin.mixin.mixin_argument.MixinArgumentDecorator object at 0x729d69fbfca0>, verb_extension=<colcon_core.verb.build.BuildVerb object at 0x729d69fbf6d0>, main=<bound method BuildVerb.main of <colcon_core.verb.build.BuildVerb object at 0x729d69fbf6d0>>, mixin_verb=('build',))
+[0.425s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) check parameters
+[0.425s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) check parameters
+[0.425s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) check parameters
+[0.425s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) check parameters
+[0.425s] Level 1:colcon.colcon_core.package_discovery:discover_packages(colcon_meta) discover
+[0.425s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) discover
+[0.425s] INFO:colcon.colcon_core.package_discovery:Crawling recursively for packages in '/home/semih/ws_offboard_control/src'
+[0.425s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ignore', 'ignore_ament_install']
+[0.425s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore'
+[0.425s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ignore_ament_install'
+[0.425s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_pkg']
+[0.425s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_pkg'
+[0.425s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['colcon_meta']
+[0.425s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'colcon_meta'
+[0.426s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['ros']
+[0.426s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'ros'
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['cmake', 'python']
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'cmake'
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python'
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extensions ['python_setup_py']
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(.) by extension 'python_setup_py'
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extensions ['ignore', 'ignore_ament_install']
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(build) by extension 'ignore'
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(build) ignored
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(custom_interfaces) by extensions ['ignore', 'ignore_ament_install']
+[0.436s] Level 1:colcon.colcon_core.package_identification:_identify(custom_interfaces) by extension 'ignore'
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(custom_interfaces) by extension 'ignore_ament_install'
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(custom_interfaces) by extensions ['colcon_pkg']
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(custom_interfaces) by extension 'colcon_pkg'
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(custom_interfaces) by extensions ['colcon_meta']
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(custom_interfaces) by extension 'colcon_meta'
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(custom_interfaces) by extensions ['ros']
+[0.437s] Level 1:colcon.colcon_core.package_identification:_identify(custom_interfaces) by extension 'ros'
+[0.439s] DEBUG:colcon.colcon_core.package_identification:Package 'custom_interfaces' with type 'ros.ament_cmake' and name 'custom_interfaces'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extensions ['ignore', 'ignore_ament_install']
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(install) by extension 'ignore'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(install) ignored
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extensions ['ignore', 'ignore_ament_install']
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(log) by extension 'ignore'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(log) ignored
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(px4_msgs) by extensions ['ignore', 'ignore_ament_install']
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(px4_msgs) by extension 'ignore'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(px4_msgs) by extension 'ignore_ament_install'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(px4_msgs) by extensions ['colcon_pkg']
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(px4_msgs) by extension 'colcon_pkg'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(px4_msgs) by extensions ['colcon_meta']
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(px4_msgs) by extension 'colcon_meta'
+[0.439s] Level 1:colcon.colcon_core.package_identification:_identify(px4_msgs) by extensions ['ros']
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(px4_msgs) by extension 'ros'
+[0.440s] DEBUG:colcon.colcon_core.package_identification:Package 'px4_msgs' with type 'ros.ament_cmake' and name 'px4_msgs'
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_drone_control) by extensions ['ignore', 'ignore_ament_install']
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_drone_control) by extension 'ignore'
+[0.440s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_drone_control) by extension 'ignore_ament_install'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_drone_control) by extensions ['colcon_pkg']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_drone_control) by extension 'colcon_pkg'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_drone_control) by extensions ['colcon_meta']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_drone_control) by extension 'colcon_meta'
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_drone_control) by extensions ['ros']
+[0.441s] Level 1:colcon.colcon_core.package_identification:_identify(swarm_drone_control) by extension 'ros'
+[0.442s] DEBUG:colcon.colcon_core.package_identification:Package 'swarm_drone_control' with type 'ros.ament_cmake' and name 'swarm_drone_control'
+[0.442s] Level 1:colcon.colcon_core.package_discovery:discover_packages(recursive) using defaults
+[0.442s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) discover
+[0.442s] Level 1:colcon.colcon_core.package_discovery:discover_packages(ignore) using defaults
+[0.442s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) discover
+[0.442s] Level 1:colcon.colcon_core.package_discovery:discover_packages(path) using defaults
+[0.460s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'px4_msgs' in 'px4_msgs'
+[0.460s] INFO:colcon.colcon_core.package_selection:Skipping not selected package 'custom_interfaces' in 'custom_interfaces'
+[0.461s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) check parameters
+[0.461s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) discover
+[0.463s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 1 installed packages in /home/semih/ws_remote_control/install
+[0.464s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 5 installed packages in /home/semih/new_tutorial_ws/install
+[0.464s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 1 installed packages in /home/semih/moveit_ws/install
+[0.465s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 5 installed packages in /home/semih/ros2_ws/install
+[0.465s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 3 installed packages in /home/semih/ws_offboard_control/install
+[0.467s] DEBUG:colcon.colcon_installed_package_information.package_discovery:Found 405 installed packages in /opt/ros/humble
+[0.468s] Level 1:colcon.colcon_core.package_discovery:discover_packages(prefix_path) using defaults
+[0.509s] Level 5:colcon.colcon_core.verb:set package 'swarm_drone_control' build argument 'cmake_args' from command line to 'None'
+[0.509s] Level 5:colcon.colcon_core.verb:set package 'swarm_drone_control' build argument 'cmake_target' from command line to 'None'
+[0.509s] Level 5:colcon.colcon_core.verb:set package 'swarm_drone_control' build argument 'cmake_target_skip_unavailable' from command line to 'False'
+[0.509s] Level 5:colcon.colcon_core.verb:set package 'swarm_drone_control' build argument 'cmake_clean_cache' from command line to 'False'
+[0.509s] Level 5:colcon.colcon_core.verb:set package 'swarm_drone_control' build argument 'cmake_clean_first' from command line to 'False'
+[0.509s] Level 5:colcon.colcon_core.verb:set package 'swarm_drone_control' build argument 'cmake_force_configure' from command line to 'False'
+[0.509s] Level 5:colcon.colcon_core.verb:set package 'swarm_drone_control' build argument 'ament_cmake_args' from command line to 'None'
+[0.509s] Level 5:colcon.colcon_core.verb:set package 'swarm_drone_control' build argument 'catkin_cmake_args' from command line to 'None'
+[0.509s] Level 5:colcon.colcon_core.verb:set package 'swarm_drone_control' build argument 'catkin_skip_building_tests' from command line to 'False'
+[0.509s] DEBUG:colcon.colcon_core.verb:Building package 'swarm_drone_control' with the following arguments: {'ament_cmake_args': None, 'build_base': '/home/semih/ws_offboard_control/src/build/swarm_drone_control', 'catkin_cmake_args': None, 'catkin_skip_building_tests': False, 'cmake_args': None, 'cmake_clean_cache': False, 'cmake_clean_first': False, 'cmake_force_configure': False, 'cmake_target': None, 'cmake_target_skip_unavailable': False, 'install_base': '/home/semih/ws_offboard_control/src/install/swarm_drone_control', 'merge_install': False, 'path': '/home/semih/ws_offboard_control/src/swarm_drone_control', 'symlink_install': False, 'test_result_base': None}
+[0.509s] INFO:colcon.colcon_core.executor:Executing jobs using 'parallel' executor
+[0.510s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete
+[0.510s] INFO:colcon.colcon_ros.task.ament_cmake.build:Building ROS package in '/home/semih/ws_offboard_control/src/swarm_drone_control' with build type 'ament_cmake'
+[0.511s] INFO:colcon.colcon_cmake.task.cmake.build:Building CMake package in '/home/semih/ws_offboard_control/src/swarm_drone_control'
+[0.513s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_core.shell.bat': Not used on non-Windows systems
+[0.513s] INFO:colcon.colcon_core.shell:Skip shell extension 'powershell' for command environment: Not usable outside of PowerShell
+[0.513s] DEBUG:colcon.colcon_core.shell:Skip shell extension 'dsv' for command environment
+[0.517s] WARNING:colcon.colcon_core.shell:The following packages are in the workspace but haven't been built:
+- px4_msgs
+- custom_interfaces
+They are being used from the following locations instead:
+- /home/semih/ws_offboard_control/install/px4_msgs
+- /home/semih/ws_offboard_control/install/custom_interfaces
+To suppress this warning ignore these packages in the workspace:
+--packages-ignore px4_msgs custom_interfaces
+[0.524s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/semih/ws_offboard_control/src/build/swarm_drone_control': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/semih/ros2_ws/install/turtlesim_catch_them_all:/home/semih/ros2_ws/install/my_py_pkg:/home/semih/new_tutorial_ws/install/lifecycle_py:/home/semih/new_tutorial_ws/install/actions_py:/opt/ros/humble /usr/bin/cmake /home/semih/ws_offboard_control/src/swarm_drone_control -DCMAKE_INSTALL_PREFIX=/home/semih/ws_offboard_control/src/install/swarm_drone_control
+[1.209s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/semih/ws_offboard_control/src/build/swarm_drone_control' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/semih/ros2_ws/install/turtlesim_catch_them_all:/home/semih/ros2_ws/install/my_py_pkg:/home/semih/new_tutorial_ws/install/lifecycle_py:/home/semih/new_tutorial_ws/install/actions_py:/opt/ros/humble /usr/bin/cmake /home/semih/ws_offboard_control/src/swarm_drone_control -DCMAKE_INSTALL_PREFIX=/home/semih/ws_offboard_control/src/install/swarm_drone_control
+[1.211s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/semih/ws_offboard_control/src/build/swarm_drone_control': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/semih/ros2_ws/install/turtlesim_catch_them_all:/home/semih/ros2_ws/install/my_py_pkg:/home/semih/new_tutorial_ws/install/lifecycle_py:/home/semih/new_tutorial_ws/install/actions_py:/opt/ros/humble /usr/bin/cmake --build /home/semih/ws_offboard_control/src/build/swarm_drone_control -- -j16 -l16
+[20.053s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/semih/ws_offboard_control/src/build/swarm_drone_control' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/semih/ros2_ws/install/turtlesim_catch_them_all:/home/semih/ros2_ws/install/my_py_pkg:/home/semih/new_tutorial_ws/install/lifecycle_py:/home/semih/new_tutorial_ws/install/actions_py:/opt/ros/humble /usr/bin/cmake --build /home/semih/ws_offboard_control/src/build/swarm_drone_control -- -j16 -l16
+[20.065s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoking command in '/home/semih/ws_offboard_control/src/build/swarm_drone_control': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/semih/ros2_ws/install/turtlesim_catch_them_all:/home/semih/ros2_ws/install/my_py_pkg:/home/semih/new_tutorial_ws/install/lifecycle_py:/home/semih/new_tutorial_ws/install/actions_py:/opt/ros/humble /usr/bin/cmake --install /home/semih/ws_offboard_control/src/build/swarm_drone_control
+[20.140s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(swarm_drone_control)
+[20.141s] DEBUG:colcon.colcon_core.event_handler.log_command:Invoked command in '/home/semih/ws_offboard_control/src/build/swarm_drone_control' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/semih/ros2_ws/install/turtlesim_catch_them_all:/home/semih/ros2_ws/install/my_py_pkg:/home/semih/new_tutorial_ws/install/lifecycle_py:/home/semih/new_tutorial_ws/install/actions_py:/opt/ros/humble /usr/bin/cmake --install /home/semih/ws_offboard_control/src/build/swarm_drone_control
+[20.145s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control' for CMake module files
+[20.146s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control' for CMake config files
+[20.147s] Level 1:colcon.colcon_core.shell:create_environment_hook('swarm_drone_control', 'cmake_prefix_path')
+[20.147s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/hook/cmake_prefix_path.ps1'
+[20.147s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/hook/cmake_prefix_path.dsv'
+[20.148s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/hook/cmake_prefix_path.sh'
+[20.149s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control/lib'
+[20.149s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control/bin'
+[20.149s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/pkgconfig/swarm_drone_control.pc'
+[20.150s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/python3.10/site-packages'
+[20.150s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control/bin'
+[20.150s] INFO:colcon.colcon_core.shell:Creating package script '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.ps1'
+[20.151s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.dsv'
+[20.152s] INFO:colcon.colcon_core.shell:Creating package script '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.sh'
+[20.153s] INFO:colcon.colcon_core.shell:Creating package script '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.bash'
+[20.154s] INFO:colcon.colcon_core.shell:Creating package script '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.zsh'
+[20.154s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/colcon-core/packages/swarm_drone_control)
+[20.155s] Level 1:colcon.colcon_core.environment:create_environment_scripts_only(swarm_drone_control)
+[20.155s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control' for CMake module files
+[20.156s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control' for CMake config files
+[20.156s] Level 1:colcon.colcon_core.shell:create_environment_hook('swarm_drone_control', 'cmake_prefix_path')
+[20.156s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/hook/cmake_prefix_path.ps1'
+[20.157s] INFO:colcon.colcon_core.shell:Creating environment descriptor '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/hook/cmake_prefix_path.dsv'
+[20.157s] INFO:colcon.colcon_core.shell:Creating environment hook '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/hook/cmake_prefix_path.sh'
+[20.158s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control/lib'
+[20.158s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control/bin'
+[20.158s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/pkgconfig/swarm_drone_control.pc'
+[20.158s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/python3.10/site-packages'
+[20.158s] Level 1:colcon.colcon_core.environment:checking '/home/semih/ws_offboard_control/src/install/swarm_drone_control/bin'
+[20.158s] INFO:colcon.colcon_core.shell:Creating package script '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.ps1'
+[20.159s] INFO:colcon.colcon_core.shell:Creating package descriptor '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.dsv'
+[20.159s] INFO:colcon.colcon_core.shell:Creating package script '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.sh'
+[20.160s] INFO:colcon.colcon_core.shell:Creating package script '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.bash'
+[20.160s] INFO:colcon.colcon_core.shell:Creating package script '/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.zsh'
+[20.160s] Level 1:colcon.colcon_core.environment:create_file_with_runtime_dependencies(/home/semih/ws_offboard_control/src/install/swarm_drone_control/share/colcon-core/packages/swarm_drone_control)
+[20.161s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:closing loop
+[20.161s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:loop closed
+[20.161s] DEBUG:colcon.colcon_parallel_executor.executor.parallel:run_until_complete finished with '0'
+[20.161s] DEBUG:colcon.colcon_core.event_reactor:joining thread
+[20.170s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.terminal_notifier': Not used on non-Darwin systems
+[20.170s] INFO:colcon.colcon_core.plugin_system:Skipping extension 'colcon_notification.desktop_notification.win32': Not used on non-Windows systems
+[20.170s] INFO:colcon.colcon_notification.desktop_notification:Sending desktop notification using 'notify2'
+[20.183s] DEBUG:colcon.colcon_core.event_reactor:joined thread
+[20.184s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/semih/ws_offboard_control/src/install/local_setup.ps1'
+[20.185s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/semih/ws_offboard_control/src/install/_local_setup_util_ps1.py'
+[20.187s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/semih/ws_offboard_control/src/install/setup.ps1'
+[20.190s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/semih/ws_offboard_control/src/install/local_setup.sh'
+[20.192s] INFO:colcon.colcon_core.shell:Creating prefix util module '/home/semih/ws_offboard_control/src/install/_local_setup_util_sh.py'
+[20.193s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/semih/ws_offboard_control/src/install/setup.sh'
+[20.195s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/semih/ws_offboard_control/src/install/local_setup.bash'
+[20.195s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/semih/ws_offboard_control/src/install/setup.bash'
+[20.197s] INFO:colcon.colcon_core.shell:Creating prefix script '/home/semih/ws_offboard_control/src/install/local_setup.zsh'
+[20.198s] INFO:colcon.colcon_core.shell:Creating prefix chain script '/home/semih/ws_offboard_control/src/install/setup.zsh'

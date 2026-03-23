@@ -14,3 +14,8 @@ void GamepadController::altitude_callback(const px4_msgs::msg::VehicleAttitude::
 {
     this->vehicle_attitude_ = msg;
 }
+
+void GamepadController::neighbors_info_callback(const custom_interfaces::msg::NeighborsInfo::SharedPtr msg)
+{
+    this->current_neighbors_info_ = msg;
+}

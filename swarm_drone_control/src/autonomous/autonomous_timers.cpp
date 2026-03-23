@@ -3,13 +3,11 @@
 // Mission state machine - called every 100ms
 void SwarmMemberPathPlanner::state_cycle_callback()
 {
-    if (!current_neighbors_info_ || !current_wp_)
+    if (!current_neighbors_info_)
         return;
-
-    if (this->latest_qr_info_)
-    {
-        this->current_mission = Mission::DO_PROCESS;
-    }
+        
+    if (!current_wp_)
+        return;
 
     switch (this->current_mission)
     {

@@ -8,6 +8,8 @@
 #include <px4_msgs/msg/vehicle_attitude.hpp>
 #include <px4_msgs/msg/vehicle_status.hpp>
 
+#include <custom_interfaces/msg/neighbors_info.hpp>
+
 #include <rclcpp_lifecycle/lifecycle_node.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <stdint.h>
@@ -62,6 +64,7 @@ private:
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_subscriber_;
     rclcpp::Subscription<px4_msgs::msg::VehicleAttitude>::SharedPtr vehicle_attitude_subscriber_;
     rclcpp::Subscription<px4_msgs::msg::VehicleStatus>::SharedPtr vehicle_status_subscriber_;
+    rclcpp::Subscription<custom_interfaces::msg::NeighborsInfo>::SharedPtr neighbors_info_subscription_;
 
     // Timers
     rclcpp::TimerBase::SharedPtr timer_;
@@ -71,8 +74,11 @@ private:
     sensor_msgs::msg::Joy::SharedPtr joystick_state_;
     px4_msgs::msg::VehicleAttitude::SharedPtr vehicle_attitude_;
     px4_msgs::msg::VehicleStatus::SharedPtr vehicle_status_;
+    custom_interfaces::msg::NeighborsInfo::SharedPtr current_neighbors_info_;
 
     int arm_timer = 0;
+    bool initial_distance_set_ = false;
+    double target_distance_to_cog_ = 0.0;
 
     /**
      * @brief Convert joystick to world-frame velocities
@@ -97,6 +103,9 @@ private:
 
     /** @brief Monitor arming status */
     void vehicle_status_callback(const px4_msgs::msg::VehicleStatus::SharedPtr msg);
+
+    /** @brief Neighbors info for rigid body formation control */
+    void neighbors_info_callback(const custom_interfaces::msg::NeighborsInfo::SharedPtr msg);
 
     /** @brief Timer callback for periodic control updates */
     void controller_callback();

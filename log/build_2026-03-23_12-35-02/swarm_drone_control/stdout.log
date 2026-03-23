@@ -1,0 +1,99 @@
+-- Found ament_cmake: 1.3.13 (/opt/ros/humble/share/ament_cmake/cmake)
+-- Override CMake install command with custom implementation using symlinks instead of copying resources
+-- Found builtin_interfaces: 1.2.2 (/opt/ros/humble/share/builtin_interfaces/cmake)
+-- Found rosidl_generator_c: 3.1.8 (/opt/ros/humble/share/rosidl_generator_c/cmake)
+-- Found rosidl_adapter: 3.1.8 (/opt/ros/humble/share/rosidl_adapter/cmake)
+-- Found rosidl_generator_cpp: 3.1.8 (/opt/ros/humble/share/rosidl_generator_cpp/cmake)
+-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+-- Found eigen3_cmake_module: 0.1.1 (/opt/ros/humble/share/eigen3_cmake_module/cmake)
+-- Found geometry_msgs: 4.9.1 (/opt/ros/humble/share/geometry_msgs/cmake)
+-- Found px4_msgs: 2.0.1 (/home/semih/ws_offboard_control/install/px4_msgs/share/px4_msgs/cmake)
+-- Found rclcpp: 16.0.18 (/opt/ros/humble/share/rclcpp/cmake)
+-- Found rmw_implementation_cmake: 6.1.2 (/opt/ros/humble/share/rmw_implementation_cmake/cmake)
+-- Found rmw_cyclonedds_cpp: 1.3.4 (/opt/ros/humble/share/rmw_cyclonedds_cpp/cmake)
+-- Using RMW implementation 'rmw_cyclonedds_cpp' as default
+-- Found sensor_msgs: 4.9.1 (/opt/ros/humble/share/sensor_msgs/cmake)
+-- Found rclpy: 3.3.20 (/opt/ros/humble/share/rclpy/cmake)
+-- Found custom_interfaces: 0.0.0 (/home/semih/ws_offboard_control/install/custom_interfaces/share/custom_interfaces/cmake)
+-- Found cv_bridge: 3.2.1 (/opt/ros/humble/share/cv_bridge/cmake)
+-- Found rclcpp_lifecycle: 16.0.18 (/opt/ros/humble/share/rclcpp_lifecycle/cmake)
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/semih/ws_offboard_control/src/build/swarm_drone_control
+[35m[1mConsolidate compiler generated dependencies of target change_state[0m
+[35m[1mConsolidate compiler generated dependencies of target uav_controller[0m
+[35m[1mConsolidate compiler generated dependencies of target swarm_communication[0m
+[35m[1mConsolidate compiler generated dependencies of target swarm_member_path_planner[0m
+[35m[1mConsolidate compiler generated dependencies of target gamepad_controller[0m
+[  7%] Built target change_state
+[  7%] Built target ament_cmake_python_symlink_swarm_drone_control
+[ 28%] Built target uav_controller
+[ 50%] Built target swarm_communication
+[ 60%] [32mBuilding CXX object CMakeFiles/gamepad_controller.dir/src/controller/controller_lifecycle.cpp.o[0m
+[ 67%] [32mBuilding CXX object CMakeFiles/gamepad_controller.dir/src/controller/controller_listeners.cpp.o[0m
+[ 67%] [32mBuilding CXX object CMakeFiles/swarm_member_path_planner.dir/src/autonomous/autonomous_missions.cpp.o[0m
+[ 67%] [32mBuilding CXX object CMakeFiles/gamepad_controller.dir/src/controller/controller.cpp.o[0m
+[ 67%] [32mBuilding CXX object CMakeFiles/swarm_member_path_planner.dir/src/autonomous/autonomous.cpp.o[0m
+[ 75%] [32mBuilding CXX object CMakeFiles/gamepad_controller.dir/src/controller/controller_main.cpp.o[0m
+[ 75%] [32mBuilding CXX object CMakeFiles/swarm_member_path_planner.dir/src/autonomous/autonomous_publishers.cpp.o[0m
+[ 78%] [32mBuilding CXX object CMakeFiles/swarm_member_path_planner.dir/src/autonomous/autonomous_subscribers.cpp.o[0m
+[ 85%] [32mBuilding CXX object CMakeFiles/gamepad_controller.dir/src/controller/controller_timers.cpp.o[0m
+[ 85%] [32mBuilding CXX object CMakeFiles/swarm_member_path_planner.dir/src/autonomous/autonomous_timers.cpp.o[0m
+[ 89%] [32mBuilding CXX object CMakeFiles/gamepad_controller.dir/src/controller/controller_publishers.cpp.o[0m
+[ 92%] [32mBuilding CXX object CMakeFiles/swarm_member_path_planner.dir/src/autonomous/autonomous_col_avoid.cpp.o[0m
+running egg_info
+writing swarm_drone_control.egg-info/PKG-INFO
+writing dependency_links to swarm_drone_control.egg-info/dependency_links.txt
+writing top-level names to swarm_drone_control.egg-info/top_level.txt
+reading manifest file 'swarm_drone_control.egg-info/SOURCES.txt'
+writing manifest file 'swarm_drone_control.egg-info/SOURCES.txt'
+[ 92%] Built target ament_cmake_python_build_swarm_drone_control_egg
+[ 96%] [32m[1mLinking CXX executable swarm_member_path_planner[0m
+[100%] [32m[1mLinking CXX executable gamepad_controller[0m
+[100%] Built target swarm_member_path_planner
+[100%] Built target gamepad_controller
+-- Install configuration: ""
+-- Execute custom install script
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/swarm_drone_control/uav_controller
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/swarm_drone_control/swarm_member_path_planner
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/swarm_drone_control/swarm_communication
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/swarm_drone_control/change_state
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/swarm_drone_control/gamepad_controller
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/include/calculations/geographic.hpp
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/include/calculations/geographic_impl.hpp
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/include/calculations/spatial.hpp
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/include/calculations/spatial_impl.hpp
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control//launch/ground_control.py
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control//launch/multi_robot_start.py
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control//launch/multi_robot_start.xml
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control//config/multi_robot_params.yaml
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/environment/pythonpath.sh
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/environment/pythonpath.dsv
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control-0.1.0-py3.10.egg-info/PKG-INFO
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control-0.1.0-py3.10.egg-info/SOURCES.txt
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control-0.1.0-py3.10.egg-info/dependency_links.txt
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control-0.1.0-py3.10.egg-info/top_level.txt
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control/__init__.py
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control/module_to_import.py
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control/scripts/camera_bridge.py
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/swarm_drone_control/camera_bridge.py
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/ament_index/resource_index/package_run_dependencies/swarm_drone_control
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/ament_index/resource_index/parent_prefix_path/swarm_drone_control
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/environment/ament_prefix_path.sh
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/environment/ament_prefix_path.dsv
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/environment/path.sh
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/environment/path.dsv
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/local_setup.bash
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/local_setup.sh
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/local_setup.zsh
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/local_setup.dsv
+-- Symlinking: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.dsv
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/ament_index/resource_index/packages/swarm_drone_control
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/cmake/ament_cmake_export_dependencies-extras.cmake
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/cmake/ament_cmake_export_include_directories-extras.cmake
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/cmake/swarm_drone_controlConfig.cmake
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/cmake/swarm_drone_controlConfig-version.cmake
+-- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.xml
+Listing '/home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control'...
+Listing '/home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control/scripts'...

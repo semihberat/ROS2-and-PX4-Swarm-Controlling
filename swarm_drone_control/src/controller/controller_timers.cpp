@@ -23,5 +23,9 @@ void GamepadController::controller_callback()
         }
     }
 
-    this->relative_movement(this->joystick_state_->axes[4] * 10, -this->joystick_state_->axes[3] * 10, -this->joystick_state_->axes[1] * 10, -this->joystick_state_->axes[0] * 3.14f);
+    this->relative_movement(
+        (this->joystick_state_->axes[4] + this->joystick_state_->axes[7]) * 10,
+        (-this->joystick_state_->axes[3] + this->joystick_state_->axes[6]) * 10,
+        -this->joystick_state_->axes[1] * 10,
+        -this->joystick_state_->axes[0] * 3.14f);
 }

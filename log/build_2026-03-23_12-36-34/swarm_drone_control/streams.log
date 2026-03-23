@@ -1,0 +1,63 @@
+[0.015s] Invoking command in '/home/semih/ws_offboard_control/src/build/swarm_drone_control': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/semih/ros2_ws/install/turtlesim_catch_them_all:/home/semih/ros2_ws/install/my_py_pkg:/home/semih/new_tutorial_ws/install/lifecycle_py:/home/semih/new_tutorial_ws/install/actions_py:/opt/ros/humble /usr/bin/cmake --build /home/semih/ws_offboard_control/src/build/swarm_drone_control -- -j16 -l16
+[0.070s] [35m[1mConsolidate compiler generated dependencies of target gamepad_controller[0m
+[0.071s] [35m[1mConsolidate compiler generated dependencies of target swarm_member_path_planner[0m
+[0.080s] [  7%] Built target change_state
+[0.083s] [ 50%] Built target uav_controller
+[0.083s] [ 50%] Built target swarm_communication
+[0.086s] [ 50%] Built target ament_cmake_python_symlink_swarm_drone_control
+[0.104s] [ 75%] Built target gamepad_controller
+[0.105s] [100%] Built target swarm_member_path_planner
+[0.400s] running egg_info
+[0.401s] writing swarm_drone_control.egg-info/PKG-INFO
+[0.402s] writing dependency_links to swarm_drone_control.egg-info/dependency_links.txt
+[0.402s] writing top-level names to swarm_drone_control.egg-info/top_level.txt
+[0.406s] reading manifest file 'swarm_drone_control.egg-info/SOURCES.txt'
+[0.406s] writing manifest file 'swarm_drone_control.egg-info/SOURCES.txt'
+[0.448s] [100%] Built target ament_cmake_python_build_swarm_drone_control_egg
+[0.463s] Invoked command in '/home/semih/ws_offboard_control/src/build/swarm_drone_control' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/semih/ros2_ws/install/turtlesim_catch_them_all:/home/semih/ros2_ws/install/my_py_pkg:/home/semih/new_tutorial_ws/install/lifecycle_py:/home/semih/new_tutorial_ws/install/actions_py:/opt/ros/humble /usr/bin/cmake --build /home/semih/ws_offboard_control/src/build/swarm_drone_control -- -j16 -l16
+[0.475s] Invoking command in '/home/semih/ws_offboard_control/src/build/swarm_drone_control': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/semih/ros2_ws/install/turtlesim_catch_them_all:/home/semih/ros2_ws/install/my_py_pkg:/home/semih/new_tutorial_ws/install/lifecycle_py:/home/semih/new_tutorial_ws/install/actions_py:/opt/ros/humble /usr/bin/cmake --install /home/semih/ws_offboard_control/src/build/swarm_drone_control
+[0.482s] -- Install configuration: ""
+[0.483s] -- Execute custom install script
+[0.483s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/swarm_drone_control/uav_controller
+[0.483s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/swarm_drone_control/swarm_member_path_planner
+[0.483s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/swarm_drone_control/swarm_communication
+[0.483s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/swarm_drone_control/change_state
+[0.484s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/swarm_drone_control/gamepad_controller
+[0.484s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/include/calculations/geographic.hpp
+[0.484s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/include/calculations/geographic_impl.hpp
+[0.484s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/include/calculations/spatial.hpp
+[0.484s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/include/calculations/spatial_impl.hpp
+[0.484s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control//launch/ground_control.py
+[0.485s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control//launch/multi_robot_start.py
+[0.485s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control//launch/multi_robot_start.xml
+[0.485s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control//config/multi_robot_params.yaml
+[0.485s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/environment/pythonpath.sh
+[0.485s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/environment/pythonpath.dsv
+[0.485s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control-0.1.0-py3.10.egg-info/PKG-INFO
+[0.485s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control-0.1.0-py3.10.egg-info/SOURCES.txt
+[0.485s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control-0.1.0-py3.10.egg-info/dependency_links.txt
+[0.486s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control-0.1.0-py3.10.egg-info/top_level.txt
+[0.486s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control/__init__.py
+[0.486s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control/module_to_import.py
+[0.486s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control/scripts/camera_bridge.py
+[0.486s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/lib/swarm_drone_control/camera_bridge.py
+[0.486s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/ament_index/resource_index/package_run_dependencies/swarm_drone_control
+[0.487s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/ament_index/resource_index/parent_prefix_path/swarm_drone_control
+[0.487s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/environment/ament_prefix_path.sh
+[0.487s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/environment/ament_prefix_path.dsv
+[0.487s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/environment/path.sh
+[0.487s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/environment/path.dsv
+[0.487s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/local_setup.bash
+[0.487s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/local_setup.sh
+[0.487s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/local_setup.zsh
+[0.487s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/local_setup.dsv
+[0.488s] -- Symlinking: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.dsv
+[0.499s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/ament_index/resource_index/packages/swarm_drone_control
+[0.499s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/cmake/ament_cmake_export_dependencies-extras.cmake
+[0.499s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/cmake/ament_cmake_export_include_directories-extras.cmake
+[0.499s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/cmake/swarm_drone_controlConfig.cmake
+[0.499s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/cmake/swarm_drone_controlConfig-version.cmake
+[0.499s] -- Up-to-date symlink: /home/semih/ws_offboard_control/src/install/swarm_drone_control/share/swarm_drone_control/package.xml
+[0.532s] Listing '/home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control'...
+[0.532s] Listing '/home/semih/ws_offboard_control/src/install/swarm_drone_control/local/lib/python3.10/dist-packages/swarm_drone_control/scripts'...
+[0.538s] Invoked command in '/home/semih/ws_offboard_control/src/build/swarm_drone_control' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/home/semih/ros2_ws/install/turtlesim_catch_them_all:/home/semih/ros2_ws/install/my_py_pkg:/home/semih/new_tutorial_ws/install/lifecycle_py:/home/semih/new_tutorial_ws/install/actions_py:/opt/ros/humble /usr/bin/cmake --install /home/semih/ws_offboard_control/src/build/swarm_drone_control

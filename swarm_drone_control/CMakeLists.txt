@@ -64,6 +64,7 @@ add_executable(swarm_member_path_planner
 	src/autonomous/autonomous_subscribers.cpp
 	src/autonomous/autonomous_timers.cpp
         src/autonomous/autonomous_col_avoid.cpp
+        
 )
 ament_target_dependencies(swarm_member_path_planner rclcpp px4_msgs custom_interfaces sensor_msgs rclcpp_lifecycle)
 install(TARGETS swarm_member_path_planner DESTINATION lib/${PROJECT_NAME})

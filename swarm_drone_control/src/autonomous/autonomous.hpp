@@ -53,7 +53,7 @@ using LifecycleCallbackReturn = rclcpp_lifecycle::node_interfaces::LifecycleNode
 #define LOG_MISSION(logger, ...) RCLCPP_INFO(logger, COLOR_GREEN __VA_ARGS__ COLOR_RESET)
 #define LOG_SUCCESS(logger, ...) RCLCPP_INFO(logger, COLOR_MAGENTA __VA_ARGS__ COLOR_RESET)
 
-#include "autonomous_utils.hpp"
+#include "autonomous/autonomous_utils.hpp"
 
 /**
  * @brief Autonomous swarm member that follows formation and executes missions
@@ -78,6 +78,7 @@ private:
 
     // QR Information Multi-Subscribing
     std::vector<rclcpp::Subscription<QRInformation>::SharedPtr> qr_subs_;
+    QRInformation::SharedPtr qr_info_;
     QRInformation::SharedPtr latest_qr_info_;
 
     // Timers
@@ -131,7 +132,11 @@ private:
     // Neighbors info
     NeighborsInfo::SharedPtr current_neighbors_info_;
     spatial::EulerAngles current_euler_angles_;
-
+    
+    // Mission context
+    bool home_position_stored = false;
+    VehicleGlobalPosition initial_home_pos_;
+    
     std::vector<DLatDLon> initial_n_distances;
     std::vector<DLatDLon> current_n_distances;
 
@@ -159,6 +164,15 @@ private:
         DO_PROCESS,
         END_TASK
     } current_mission;
+
+    enum class DoProcess
+    {
+        FORMATION,
+        MANUEVER_PITCH_ROLL,
+        ALTITUDE_CHANGE,
+        LEAVE_THE_SWARM,
+        NEXT
+    } current_process;
 
     autonomous_utils::WaypointManager waypoint_manager_;
 
@@ -249,6 +263,12 @@ private:
     void calculate_swarm_positions();
     void elect_leader();
     void calculate_mission_specific_targets();
+
+    // DO_PROCESS
+    void formation(const custom_interfaces::msg::Formation &formasyon);
+    void manuever_pitch_roll(const custom_interfaces::msg::PitchRollMovement &manevra);
+    void altitude_change(const custom_interfaces::msg::AltitudeChange &irtifa_degisim);
+    void leave_the_swarm(const custom_interfaces::msg::LeaveTheHerd &suruden_ayrilma);
 };
 
 #endif // SWARM_MEMBER_PATH_PLANNER_HPP

@@ -15,6 +15,6 @@ void SwarmMemberPathPlanner::vehicle_attitude_subscriber(const VehicleAttitude::
 void SwarmMemberPathPlanner::qr_callback(const QRInformation::SharedPtr msg)
 {
     std::lock_guard<std::mutex> lock(data_mutex_);
-    this->latest_qr_info_ = msg;
+    this->qr_info_ = msg;
     RCLCPP_INFO(this->get_logger(), "\033[1;36mNew QR Info Received! QR ID: %d\033[0m", msg->qr_id);
 }
