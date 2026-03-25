@@ -4,14 +4,6 @@
     <br>
 </div>
 
-## ⚠️ Proje Durum Raporu: "Siz Ciddi İnsanlar Değilsiniz"
-
-[![Logan Roy Message](https://img.youtube.com/vi/BaWpS8SrkPA/0.jpg)](https://www.youtube.com/watch?v=BaWpS8SrkPA&t=60s)
-
-> **"I love you, but you are not serious people."** > 
-> *10 kişi birleşip bir LED bile yakamadığımızda gelen o his...*
-
-[🎵 Arka Planda Çalan Şarkı: Kendrick Lamar - Not Like Us](https://www.youtube.com/watch?v=H58vbez_m4E)
 
 ![Sürü İHA Mimarisi](https://img.shields.io/badge/Platform-ROS%202%20Humble-22314E?style=for-the-badge&logo=ros)
 ![PX4](https://img.shields.io/badge/Flight_Stack-PX4%20Autopilot-0B2C4A?style=for-the-badge&logo=px4)
