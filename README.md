@@ -1,5 +1,5 @@
 <div align="center">
-    <h1>🦅 Sürü İHA Uçuş Kontrol ve Otonomi Yazılımı</h1>
+    <h1>🦅 BU KORKU SİZE FAZLASIYLA YETERLİ :D</h1>
     <h3>TEKNOFEST 2026 Sürü İHA Yarışması Kritik Tasarım Raporu (KTR) Standartlarında Yazılım Dokümantasyonu</h3>
     <br>
 </div>
