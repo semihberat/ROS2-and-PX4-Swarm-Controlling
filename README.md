@@ -1,6 +1,5 @@
 <div align="center">
     <h1>🦅 Swarm Controlling with ROS2 and PX4-Autopilot :D</h1>
-    <h3>TEKNOFEST 2026 Sürü İHA Yarışması Kritik Tasarım Raporu (KTR) Standartlarında Yazılım Dokümantasyonu</h3>
     <br>
 </div>
 
