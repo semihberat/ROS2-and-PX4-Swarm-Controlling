@@ -22,6 +22,9 @@ include_directories(
 set(MSGS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/msg")
 file(GLOB CUSTOM_INTERFACES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${MSGS_DIR}/*.msg")
 
+set(ACTIONS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/action")
+file(GLOB CUSTOM_ACTIONS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${ACTIONS_DIR}/*.action")
+
 # get all srv files
 set(SRVS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/srv")
 file(GLOB CUSTOM_SRVS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${SRVS_DIR}/*.srv")
@@ -29,6 +32,7 @@ file(GLOB CUSTOM_SRVS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" "${SRVS_DIR}/*.srv"
 # Generate introspection typesupport for C and C++ and IDL files
 rosidl_generate_interfaces(${PROJECT_NAME}
 	${CUSTOM_INTERFACES}
+	${CUSTOM_ACTIONS}
 	${CUSTOM_SRVS}
 	DEPENDENCIES builtin_interfaces px4_msgs sensor_msgs
 	ADD_LINTER_TESTS

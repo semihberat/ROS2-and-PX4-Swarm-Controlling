@@ -1,4 +1,0 @@
-uint8 qr_id
-Mission gorev
-LeaveTheHerd suruden_ayrilma
-uint8 sonraki_qr

@@ -1,6 +1,7 @@
-string LINE = "CIZGI"
-string ARROW_HEAD = "OKBASI"
-string V_SHAPE = "V_FORMASYON"
+uint8 LINE=0
+uint8 TRIANGLE=1
+uint8 V_SHAPE=2
+uint8 SQUARE=3
 
-bool aktif
-string tip
+uint8 formation_type
+float32 space

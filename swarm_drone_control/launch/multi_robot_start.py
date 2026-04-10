@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch_ros.actions import Node, LifecycleNode
+from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 import os 
 
@@ -11,32 +11,16 @@ def generate_launch_description():
 
     # Or you can load parameters for loop
     ld = load_drones(number_of_drones=number_of_drones, ld=ld)
-    ld = load_cameras(number_of_cameras=1, ld=ld)
-    ld = load_swarm_communication(number_of_drones=number_of_drones, ld=ld)
-    ld = load_path_planners(number_of_drones=number_of_drones, ld=ld)
     ld = load_camera_processes(number_of_cameras=1, ld=ld)
-    ld = load_gamepad_controllers(number_of_drones=number_of_drones, ld=ld)
-    #ld = load_lidars(number_of_lidars=number_of_drones, ld=ld)
-    return ld
+    ld = load_cameras(number_of_cameras=1, ld=ld)
 
-def load_gamepad_controllers(number_of_drones: int, ld: LaunchDescription):
-    for idx in range(1, number_of_drones + 1):
-        gamepad_controller_node = LifecycleNode(
-            package="swarm_drone_control",
-            executable="gamepad_controller",
-            namespace="",
-            name=f'gamepad_controller_{idx}',
-            parameters=[
-                {"sys_id": idx}
-            ]
-        )
-        ld.add_action(gamepad_controller_node)
+    #ld = load_lidars(number_of_lidars=number_of_drones, ld=ld)
     return ld
 
 # Camera Process Nodes
 def load_camera_processes(number_of_cameras: int, ld: LaunchDescription):
     for idx in range(1, number_of_cameras + 1):
-        camera_process_node = LifecycleNode(
+        camera_process_node = Node(
             package="swarm_drone_control",
             executable="camera_bridge.py",
             namespace="",
@@ -46,50 +30,6 @@ def load_camera_processes(number_of_cameras: int, ld: LaunchDescription):
             ]
         )
         ld.add_action(camera_process_node)
-    return ld
-
-# Path Planning Calculators
-
-def load_swarm_communication(number_of_drones: int, ld: LaunchDescription):
-    for idx in range(1, number_of_drones + 1):
-        swarm_communication_node = Node(
-            package="swarm_drone_control",
-            executable="swarm_communication",
-            name=f'swarm_communication_{idx}',
-            parameters=[
-                {"sys_id": idx},
-                {"total_drones": number_of_drones}
-            ]
-        )
-        ld.add_action(swarm_communication_node)
-    return ld
-
-def load_path_planners(number_of_drones: int, ld: LaunchDescription):
-    for idx in range(1, number_of_drones + 1):
-        path_planner_node = LifecycleNode(
-            package="swarm_drone_control",
-            namespace="",
-            executable="swarm_member_path_planner",
-            name=f'path_planner_{idx}',
-            parameters=[
-                {"sys_id": idx}
-            ]
-        )
-        ld.add_action(path_planner_node)
-    return ld
-
-def load_lidars(number_of_lidars: int, ld: LaunchDescription):
-    for idx in range(1, number_of_lidars + 1):
-        
-        lidar_node = Node(
-            package = "ros_gz_bridge",
-            executable = "parameter_bridge",
-            name = f"lidar_bridge_{idx}",
-            arguments=[
-                f"/world/aruco/model/x500_lidar_2d_{idx}/link/lidar_sensor_link/sensor/lidar/scan@sensor_msgs/msg/LaserScan@gz.msgs.LaserScan"
-            ]
-        )
-        ld.add_action(lidar_node)
     return ld
 
 # Camera Nodes
@@ -123,8 +63,8 @@ def load_drones(number_of_drones: int, ld: LaunchDescription):
     for idx in range(1, number_of_drones + 1):
         drone_node = Node(
             package='swarm_drone_control',
-            executable='uav_controller',
-            name=f'drone{idx}',
+            executable='drone_core',
+            name=f'drone_{idx}',
             parameters=[
                         {'sys_id': idx},
                         ]

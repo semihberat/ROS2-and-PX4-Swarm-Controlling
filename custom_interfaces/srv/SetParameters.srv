@@ -1,0 +1,13 @@
+# Goal
+float32 id
+float32 takeoff_alt
+float32 min_alt
+float32 max_alt
+float32 formation_radius
+float32 velocity
+float32 yaw_vel
+float32 alt_vel
+---
+bool success
+string message
+

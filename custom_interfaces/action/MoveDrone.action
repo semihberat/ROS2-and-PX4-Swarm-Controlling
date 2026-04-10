@@ -1,0 +1,19 @@
+# Goal
+
+uint8 HOLD=0
+uint8 TAKEOFF=1
+uint8 FORMATION=2
+uint8 GRID=3
+uint8 WAYPOINT=4
+
+uint8 command
+GeoPoint[] geo_points
+Formation formation
+---
+# Result
+DroneInfo reached
+bool success
+string message
+---
+# Feedback
+DroneInfo current
