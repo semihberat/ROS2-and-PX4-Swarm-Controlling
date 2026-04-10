@@ -99,3 +99,87 @@ float32 space
 ```
 DroneInfo[] neighbors
 ```
+
+---
+
+## Kod İşleyişi
+
+### DroneCore Node'u Ne Yapar?
+
+Her drone için ayrı bir `DroneCore` node'u çalışır. `sys_id` parametresiyle 1'den numaralandırılır.
+
+**Başlangıçta (constructor):**
+1. `sys_id` parametresini okur.
+2. Publisher, subscriber, action server ve service server'ları oluşturur.
+3. 100 ms'de bir çalışan timer başlatır.
+
+**Timer callback — her 100 ms:**
+- İlk 10 tick'te PX4'e offboard mod + sıfır hız setpoint'i gönderir (PX4 offboard geçişi için zorunlu).
+- 10. tick'te `VEHICLE_CMD_DO_SET_MODE` ile offboard moda geçiş komutu atar.
+- Her tick'te kendi konumunu `/drone_info`'ya yayınlar.
+
+**Veri akışı:**
+```
+PX4 FMU
+  └─ vehicle_global_position  ──→ drone_info_.geo_point (lat/lon/alt)
+  └─ vehicle_attitude          ──→ drone_info_.yaw (kuaterniyon → yaw)
+  └─ vehicle_control_mode      ──→ is_armed_
+
+DroneCore
+  └─ /drone_info (pub)  ──→ kendi konumu sürüye + GCS'e
+  └─ /drone_info (sub)  ──→ diğer dronların konumu swarm_info_[id-1]'e kaydedilir
+```
+
+**Action server (MoveDrone) işleyişi:**
+
+Yeni goal gelince aktif goal **preempt** edilir (abort), yeni goal çalıştırılır.
+
+| Komut | Davranış | Succeed Koşulu |
+|-------|----------|----------------|
+| `HOLD` | Sıfır setpoint | Anında |
+| `TAKEOFF` | Arm et → P kontrol ile `takeoff_alt`'a çık | ±0.25 m yaklaşınca |
+| `WAYPOINT` | Bearing hesapla → hız vektörü → sıradaki noktaya git | Tüm noktalar ±0.25 m'de geçilince |
+| `GRID` | Köşe noktalardan tarama yolu üret → WAYPOINT gibi işle | Tüm tarama yolu bitti |
+
+Her döngüde feedback olarak drone'un anlık `DroneInfo`'su gönderilir. Cancel isteği her zaman kabul edilir.
+
+**Service (SetParameters):**  
+`request.id == sys_id` ise parametreleri `ServiceParameters` struct'ına yazar. Action server bu struct'ı kullanır.
+
+> ⚠️ `id = 0` broadcast olarak tasarlanmış ama koddaki `id != sys_id || id != 0` koşulu yanlış — broadcast çalışmıyor. Her drone'a ayrı ayrı çağrı atın.
+
+---
+
+## Harita Entegrasyonlu GCS İçin Gerekenler
+
+### Okunacaklar
+
+| Veri | Topik | QoS |
+|------|-------|-----|
+| Tüm sürünün konumu | `/drone_info` | `BEST_EFFORT`, depth 5 |
+| Arm durumu | `/px4_{id}/fmu/out/vehicle_control_mode` | `BEST_EFFORT`, depth 5 |
+| Kamera görüntüsü | `/world/aruco/model/x500_mono_cam_down_{id}/link/camera_link/sensor/imager/image` | default |
+
+> `/drone_info` mesajında haritada kullanılacak alanlar:
+> - `msg.id` → hangi drone marker'ı
+> - `msg.geo_point.lat / .lon` → marker konumu
+> - `msg.geo_point.alt` → irtifa
+> - `msg.yaw` → drone'un baktığı yön (radyan, NED)
+> - `msg.geo_vel.vel` → hız
+
+### Yazılacaklar
+
+| İşlem | Arayüz | Komut |
+|-------|--------|-------|
+| Kaldır | `/uav_{id}/move_drone` action | `TAKEOFF` |
+| Noktaya gönder | `/uav_{id}/move_drone` action | `WAYPOINT + geo_points` |
+| Alan tarat | `/uav_{id}/move_drone` action | `GRID + köşe noktaları` |
+| Beklet / durdur | `/uav_{id}/move_drone` action | `HOLD` |
+| Hız / irtifa ayarla | `/uav_{id}/set_parameters` service | uçuş öncesi veya sırası |
+
+### Dikkat Edilmesi Gerekenler
+
+- **QoS:** PX4 ve `/drone_info` topikleri `BEST_EFFORT`. GCS subscriber aynısını kullanmalı, yoksa mesaj gelmez.
+- **Preemption:** Action goal aktifken yenisi gönderilirse eski `ABORTED` döner. GCS bu durumu handle etmeli.
+- **Arm zorunluluğu:** `WAYPOINT` ve `GRID` arm değilse anında `ABORTED` döner.
+- **Offboard süreklilik:** PX4, setpoint 500 ms gelmezse modu düşürür. `DroneCore` bunu kendi timer'ıyla hallediyor, GCS PX4'e doğrudan yazmıyorsa sorun yok.
