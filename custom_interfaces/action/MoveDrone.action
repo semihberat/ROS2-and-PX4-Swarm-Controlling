@@ -5,6 +5,8 @@ uint8 TAKEOFF=1
 uint8 FORMATION=2
 uint8 GRID=3
 uint8 WAYPOINT=4
+uint8 LAND=5
+
 
 uint8 command
 GeoPoint[] geo_points

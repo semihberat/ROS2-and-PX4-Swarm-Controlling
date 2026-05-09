@@ -39,6 +39,7 @@ find_package(rclpy REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(rclcpp_action REQUIRED)
+find_package(Fields2Cover REQUIRED)
 
 ###########
 # Targets #
@@ -51,9 +52,9 @@ include_directories(include)
 add_executable(drone_core
   src/main.cpp
   src/drone_core.cpp
-  src/action_servers.cpp
+  src/state_cycle.cpp
 )
-ament_target_dependencies(drone_core rclcpp px4_msgs custom_interfaces rclcpp_lifecycle rclcpp_action)
+ament_target_dependencies(drone_core rclcpp px4_msgs custom_interfaces rclcpp_lifecycle rclcpp_action Fields2Cover)
 
 # Install C++ executable.
 install(TARGETS drone_core
@@ -79,6 +80,7 @@ ament_export_dependencies(
   rclcpp_lifecycle
   std_msgs
   lifecycle_msgs
+  Fields2Cover
 )
 
 ament_export_include_directories(include)
@@ -99,7 +101,7 @@ install(DIRECTORY config
 ament_python_install_package(${PROJECT_NAME})
 install(PROGRAMS
   swarm_drone_control/scripts/camera_bridge.py
-  swarm_drone_control/scripts/ground_control/main.py
+  swarm_drone_control/scripts/action_client.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

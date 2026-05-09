@@ -10,25 +10,25 @@ namespace geo
     constexpr double EARTH_RADIUS_M = 6371000.0;
 
     // Toleransi default (meter)
-    constexpr double DEFAULT_TOLERANCE = 0.001;
+    constexpr double DEFAULT_TOLERANCE = 0.0001;
 
     inline Distance diff_points(const custom_interfaces::msg::GeoPoint &point1,
                                 const custom_interfaces::msg::GeoPoint &point2)
     {
-        // Latitude ve Longitude farklarını derajacıkta hesapla
-        double d_lat = point2.lat - point1.lat;
-        double d_lon = point2.lon - point1.lon;
-
-        // Derajaya dönüştür (Haversine için)
+        // Derece farklarını radyana çevir
         double lat1_rad = point1.lat * M_PI / 180.0;
-        double lon1_rad = point1.lon * M_PI / 180.0;
         double lat2_rad = point2.lat * M_PI / 180.0;
-        double lon2_rad = point2.lon * M_PI / 180.0;
+        double dlat_rad = (point2.lat - point1.lat) * M_PI / 180.0;
+        double dlon_rad = (point2.lon - point1.lon) * M_PI / 180.0;
 
-        double dlat_rad = lat2_rad - lat1_rad;
-        double dlon_rad = lon2_rad - lon1_rad;
+        // --- Metre Cinsinden Farklar (Yerel Yaklaşım) ---
+        // Enlem farkı metre: Her derece sabit yaklaşık 111,319 metredir.
+        double d_lat_m = dlat_rad * EARTH_RADIUS_M;
 
-        // Haversine formülü ile yatay mesafeyi hesapla
+        // Boylam farkı metre: Bulunulan enleme göre daralır (cos(lat) ile çarpılır).
+        double d_lon_m = dlon_rad * EARTH_RADIUS_M * std::cos(lat1_rad);
+
+        // --- Haversine ile Toplam Yatay Mesafe ---
         double a = std::sin(dlat_rad / 2.0) * std::sin(dlat_rad / 2.0) +
                    std::cos(lat1_rad) * std::cos(lat2_rad) *
                        std::sin(dlon_rad / 2.0) * std::sin(dlon_rad / 2.0);
@@ -39,8 +39,8 @@ namespace geo
         double d_alt = std::fabs(point2.alt - point1.alt);
 
         return Distance{
-            d_lat + DEFAULT_TOLERANCE,
-            d_lon + DEFAULT_TOLERANCE,
+            d_lat_m + DEFAULT_TOLERANCE,
+            d_lon_m + DEFAULT_TOLERANCE,
             d_horizontal + DEFAULT_TOLERANCE,
             d_alt + DEFAULT_TOLERANCE};
     }

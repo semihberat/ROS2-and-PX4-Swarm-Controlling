@@ -1,3 +1,6 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:eeef2a7ee7def3bfbdcb0018a831200f6999bd9b3d09b4131e2e479bd7ef337d
-size 115
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: "daily"

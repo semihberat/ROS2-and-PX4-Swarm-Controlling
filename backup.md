@@ -1,50 +1,189 @@
 ```cpp
-#include "swarm_drone_control/swarm_member_path_planner.hpp"
+#include "drone_core/drone_core.hpp"
 
-// === CALLBACK FUNCTIONS ===
-
-void SwarmMemberPathPlanner::timer_callback()
+rclcpp_action::GoalResponse DroneCore::goal_callback(const rclcpp_action::GoalUUID &uuid, std::shared_ptr<const MoveDrone::Goal> goal)
 {
+    (void)uuid;
+    (void)goal;
+    RCLCPP_INFO(this->get_logger(), "Received a new goal!");
+
+    // Policy: preempt existing goal when receiving a new valid goal
     {
-        std::lock_guard<std::mutex> lock(data_mutex_);
-        publish_trajectory_setpoint(target_vlat, target_vlon, 0.0, 0.0);
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (goal_handle_)
+        {
+            if (goal_handle_->is_active())
+            {
+                RCLCPP_INFO(this->get_logger(), "Abort current goal and accept new goal");
+                preempted_goal_id_ = goal_handle_->get_goal_id();
+            }
+        }
     }
+
+    RCLCPP_INFO(this->get_logger(), "Accepting the goal!");
+    return rclcpp_action::GoalResponse::ACCEPT_AND_EXECUTE;
 }
 
-void SwarmMemberPathPlanner::path_planner_callback(const NeighborsInfo::SharedPtr msg)
+rclcpp_action::CancelResponse DroneCore::cancel_callback(const std::shared_ptr<MoveDroneGoalHandle> goal_handle)
 {
-    if (verification_count < verification_count_max)
+    RCLCPP_INFO(this->get_logger(), "Received cancel request!");
+    (void)goal_handle;
+    return rclcpp_action::CancelResponse::ACCEPT;
+}
+
+void DroneCore::handle_accepted(const std::shared_ptr<MoveDroneGoalHandle> goal_handle)
+{
+    RCLCPP_INFO(this->get_logger(), "Executing goal!");
+    // Unutma
+
+    execute_goal(goal_handle);
+}
+
+void DroneCore::execute_goal(const std::shared_ptr<MoveDroneGoalHandle> goal_handle)
+{
     {
-        verification_count++;
-        all_positions = msg->neighbor_positions;
-        all_positions.push_back(msg->main_position);
-
-        auto center_of_gravity = geo::calculate_cog<VehicleVerticalPositions, VehicleGlobalPosition>(all_positions);
-        auto offsets = geo::calculate_offsets(center_of_gravity, offset_lat, offset_lon, all_positions.size());
-        auto matched_position = offsets[msg->main_id - 1];
-
-        target_position_ = matched_position;
+        std::lock_guard<std::mutex> lock(mutex_);
+        this->goal_handle_ = goal_handle;
     }
 
-    VectoralDistance distance_left = geo::calculate_distance<VectoralDistance>(
-        msg->main_position.lat, msg->main_position.lon,
-        target_position_.lat, target_position_.lon);
-    {
-        std::lock_guard<std::mutex> lock(data_mutex_);
-        target_vlat = distance_left.dlat_meter;
-        target_vlon = distance_left.dlon_meter;
-    }
-    for (const auto &neighbor : msg->neighbor_positions)
-    {
-        auto uav_distance = geo::calculate_distance<VectoralDistance>(
-            msg->main_position.lat, msg->main_position.lon,
-            neighbor.lat, neighbor.lon);
+    auto goal = goal_handle->get_goal();
+    auto result = std::make_shared<MoveDrone::Result>();
+    auto feedback = std::make_shared<MoveDrone::Feedback>();
 
-        if (uav_distance.distance <= collision_tolerance_m)
+    size_t num_points = goal->geo_points.size();
+    size_t i_p = 0;
+
+    rclcpp::Rate loop_rate(100ms);
+
+    while (rclcpp::ok())
+    {
         {
-            target_vlon = -uav_distance.dlon_meter + target_vlon;
-            target_vlat = -uav_distance.dlat_meter + target_vlat;
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (goal_handle->get_goal_id() == preempted_goal_id_)
+            {
+                result->message = "[PREEMPTION] Goal preempted by a new goal";
+                result->success = false;
+                goal_handle->abort(result);
+                return;
+            }
         }
+
+        if (goal_handle->is_canceling())
+        {
+            result->success = false;
+            result->message = "[CANCELLATION] Goal was canceled";
+            goal_handle->canceled(result);
+            return;
+        }
+
+        if (goal->command == MoveDrone::Goal::HOLD)
+        {
+            this->publish_trajectory_setpoint(0.0, 0.0, 0.0, 0.0);
+            result->success = true;
+            result->message = "[HOLD] Command executed successfully";
+            goal_handle->succeed(result);
+        }
+        else if (goal->command == MoveDrone::Goal::TAKEOFF)
+        {
+            if (!is_armed_)
+                this->arm();
+
+            float alt_diff = service_parameters_.takeoff_alt - drone_info_->geo_point.alt;
+            float t_alt_vel = std::clamp(alt_diff, -service_parameters_.alt_vel, service_parameters_.alt_vel);
+
+            if (alt_diff < 0.0f)
+            {
+                this->publish_trajectory_setpoint(0.0, 0.0, t_alt_vel, 0.0);
+            }
+            else
+            {
+                this->publish_trajectory_setpoint(0.0, 0.0, -t_alt_vel, 0.0);
+            }
+
+            if (alt_diff < service_parameters_.alt_vel)
+            {
+                this->publish_trajectory_setpoint(0.0, 0.0, -alt_diff * P_GAIN, 0.0);
+                if (alt_diff < 0.25f)
+                {
+                    this->publish_trajectory_setpoint(0.0, 0.0, 0.0, 0.0);
+                    result->success = true;
+                    result->message = "[TAKEOFF] Command executed successfully";
+                    goal_handle->succeed(result);
+                    return;
+                }
+            }
+        }
+
+        else if (goal->command == MoveDrone::Goal::LAND)
+        {
+            this->publish_trajectory_setpoint(0.0, 0.0, 1.0, 0.0);
+            if (land_detected)
+            {
+                this->publish_trajectory_setpoint(0.0, 0.0, 0.0, 0.0);
+                this->disarm();
+                if (!is_armed_)
+                {
+                    result->success = true;
+                    result->message = "[LAND] Command executed successfully";
+                    goal_handle->succeed(result);
+                    return;
+                }
+            }
+        }
+
+        else if (goal->command == MoveDrone::Goal::WAYPOINT)
+        {
+            if (!is_armed_)
+            {
+                result->success = false;
+                result->message = "[WAYPOINT] Drone is not armed";
+                goal_handle->abort(result);
+                return;
+            }
+            // Minus is overloaded
+            geo::Distance dist = goal->geo_points[i_p] - *this;
+            double bearing = geo::calculate_bearing(drone_info_->geo_point, goal->geo_points[i_p]);
+            float lat_vel = service_parameters_.velocity * cos(bearing);
+            float lon_vel = service_parameters_.velocity * sin(bearing);
+
+            double diff = bearing - drone_info_->yaw;
+
+            if (diff > M_PI)
+                diff -= 2.0 * M_PI;
+            else if (diff < -M_PI)
+                diff += 2.0 * M_PI;
+            float yaw_vel = service_parameters_.yaw_vel * diff;
+
+            this->publish_trajectory_setpoint(lat_vel, lon_vel, 0.0, yaw_vel);
+            if (dist.d < service_parameters_.velocity)
+            {
+                this->publish_trajectory_setpoint(dist.d_lat * P_GAIN, dist.d_lon * P_GAIN, 0.0, yaw_vel * P_GAIN);
+                if (dist.d <= 0.5)
+                {
+                    i_p++;
+                    if (i_p >= num_points - 1)
+                    {
+                        this->publish_trajectory_setpoint(0.0, 0.0, 0.0, 0.0);
+                        result->success = true;
+                        result->message = "[WAYPOINT] Command executed successfully";
+                        goal_handle->succeed(result);
+                        return;
+                    }
+                }
+            }
+        }
+        else
+        {
+            RCLCPP_WARN(this->get_logger(), "Unknown command received: %d", goal->command);
+            result->success = false;
+            result->message = "[UNKNOWN] Unknown command received";
+            goal_handle->abort(result);
+            return;
+        }
+
+        feedback->current.geo_point = drone_info_->geo_point;
+        feedback->current.id = drone_info_->id;
+        loop_rate.sleep();
     }
 }
 ```

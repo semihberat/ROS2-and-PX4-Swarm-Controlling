@@ -1,3 +1,9 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:a168d13be09e54888575bc00845877402170fa66c15ec3bbad74b5ab695dd1d3
-size 410
+swarm_member_path_planner.cpp lifecycle bir node haline gelecek islem bittiginde transition on_configured yapacak 
+ve bu lifecycle'in service manageri olacak
+
+ros2 lifecycle set /path_planner_1 configure
+
+swarm_member_path_planner.cpp'deki durma kriterini global bir degiskene belirledigimiz transition id ve label'a 
+gore belirleyecegiz bundan dolayi da mesaj tiplerine dikkat edecegiz 
+
+ros2 run joy joy_node
