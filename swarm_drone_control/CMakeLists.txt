@@ -53,6 +53,8 @@ add_executable(drone_core
   src/main.cpp
   src/drone_core.cpp
   src/state_cycle.cpp
+  src/control.cpp
+  src/commands.cpp
 )
 ament_target_dependencies(drone_core rclcpp px4_msgs custom_interfaces rclcpp_lifecycle rclcpp_action Fields2Cover)
 

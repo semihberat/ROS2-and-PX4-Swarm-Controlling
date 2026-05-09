@@ -7,10 +7,8 @@ uint8 GRID=3
 uint8 WAYPOINT=4
 uint8 LAND=5
 
-
 uint8 command
 GeoPoint[] geo_points
-Formation formation
 ---
 # Result
 DroneInfo reached

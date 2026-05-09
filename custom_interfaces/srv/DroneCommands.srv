@@ -3,8 +3,7 @@ uint8 HOLD=0
 uint8 TAKEOFF=1
 uint8 LAND=2
 uint8 FORMATION=3
-uint8 GRID=4
-uint8 WAYPOINT=5
+uint8 WAYPOINT=4
 
 
 uint8[] ids

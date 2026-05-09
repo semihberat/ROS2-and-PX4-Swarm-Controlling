@@ -1,4 +1,4 @@
-16 April 2026 Clients are going to develop by Junior Stark
+09.05.2026: Çarpışma önleme PID değerleri yumuşatıldı ve kapsamlı README eklendi.
 
-servis clienti ve action clienti yaz
-kahve dünyası indirimli tambol çikolata karşılığında batuyu köle yap
+Detaylar:
+- Code refactorlar yapıldı, kod parçalandı ve daha yönetilebilir bir hale geldi.

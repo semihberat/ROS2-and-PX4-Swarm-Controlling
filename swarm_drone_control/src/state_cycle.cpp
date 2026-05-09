@@ -22,8 +22,6 @@ void DroneCore::state_cycle()
         this->goto_waypoints(this->req_->geo_points);
         break;
 
-    case custom_interfaces::srv::DroneCommands::Request::GRID:
-        break;
     default:
         this->publish_trajectory_setpoint(0.0f, 0.0f, 0.0f, 0.0f);
         break;
