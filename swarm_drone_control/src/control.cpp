@@ -4,6 +4,7 @@ void DroneCore::takeoff(float altitude)
 {
     if (!is_armed_)
         this->arm();
+    // IS ARMED CHECK
 
     altitude_controller_.setMaxOutput(service_parameters_.alt_vel);
     altitude_controller_.setSetpoint(-altitude);
@@ -40,7 +41,14 @@ void DroneCore::hold()
 void DroneCore::goto_waypoints(const std::vector<custom_interfaces::msg::GeoPoint> &waypoints)
 {
     geo::Distance dist = waypoints[i_p] - *this;
-    double bearing = geo::calculate_bearing(this->drone_info_->geo_point, waypoints[i_p]);
+
+    auto centroid = geo::centroid(swarm_info_);
+    RCLCPP_INFO(this->get_logger(), "Centroid - Lat: %f, Lon: %f", centroid.lat, centroid.lon);
+
+    auto dist_centroid = centroid - *this;
+    auto target_point = geo::after_offset(waypoints[i_p], dist_centroid);
+    double bearing = geo::calculate_bearing(this->drone_info_->geo_point, target_point);
+
     horizontal_PID_.setMaxOutput(service_parameters_.velocity);
 
     horizontal_PID_.setSetpoint(0.0);
@@ -63,9 +71,10 @@ void DroneCore::goto_waypoints(const std::vector<custom_interfaces::msg::GeoPoin
         diff += 2 * M_PI;
     float yaw_vel = diff * service_parameters_.yaw_vel;
     this->publish_trajectory_setpoint(lat_vel, lon_vel, 0.0f, yaw_vel);
-    if (dist.d <= 0.25)
-    {
 
+    if (std::abs(geo::diff_points(waypoints[i_p], centroid).d) <= 0.25)
+    {
+        i_p++;
         if (i_p >= waypoints.size())
         {
             this->req_->command = custom_interfaces::srv::DroneCommands::Request::HOLD;
@@ -95,8 +104,8 @@ void DroneCore::collision_avoidance()
             continue;
         }
 
-        swarm_PIDs_[neighbor->id - 1].setMaxOutput(1.0);
-        swarm_PIDs_[neighbor->id - 1].setSetpoint(0.0);
+        this->swarm_PIDs_[neighbor->id - 1].setMaxOutput(1.0);
+        this->swarm_PIDs_[neighbor->id - 1].setSetpoint(0.0);
         // Calculate desired relative displacement vs current displacement
         double error_lat = init_dists_[neighbor->id - 1].d_lat - dist.d_lat;
         double error_lon = init_dists_[neighbor->id - 1].d_lon - dist.d_lon;

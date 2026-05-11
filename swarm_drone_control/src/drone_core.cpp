@@ -3,9 +3,8 @@
 DroneCore::DroneCore() : rclcpp::Node("drone_core")
 {
 
-	swarm_info_.reserve(MAX_SWARM_SIZE);
 	swarm_info_.resize(MAX_SWARM_SIZE);
-	init_dists_.reserve(MAX_SWARM_SIZE);
+
 	init_dists_.resize(MAX_SWARM_SIZE);
 
 	rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
@@ -198,6 +197,7 @@ void DroneCore::publish_current_position()
 
 void DroneCore::listen_swarm_info(const custom_interfaces::msg::DroneInfo::SharedPtr msg)
 {
+
 	swarm_info_[msg->id - 1] = msg;
 }
 
@@ -236,10 +236,12 @@ void DroneCore::callbackSetParameters(const std::shared_ptr<custom_interfaces::s
 
 void DroneCore::listen_vehicle_land_detected(const px4_msgs::msg::VehicleLandDetected::SharedPtr msg)
 {
+
 	this->land_detected_ = msg->landed;
 }
 
 void DroneCore::listen_vehicle_local_position(const px4_msgs::msg::VehicleLocalPosition::SharedPtr msg)
 {
+
 	this->drone_info_->geo_point.alt = msg->z;
 }

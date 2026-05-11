@@ -9,6 +9,7 @@ uint8 WAYPOINT=4
 uint8[] ids
 uint8 command
 GeoPoint[] geo_points
+MoveTarget[] move_targets
 ---
 bool success
 string message

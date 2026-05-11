@@ -56,7 +56,6 @@ private:
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::TimerBase::SharedPtr state_cycle_timer_;
     rclcpp::TimerBase::SharedPtr control_loop_;
-    std::atomic<uint64_t> timestamp_;
     uint64_t offboard_setpoint_counter_;
     uint8_t sys_id;
 
@@ -95,17 +94,16 @@ private:
     rclcpp::SubscriptionOptions local_pos_options_;
 
     custom_interfaces::msg::DroneInfo::SharedPtr drone_info_;
-    bool is_armed_ = false;
+    std::atomic<bool> is_armed_{false};
     std::vector<custom_interfaces::msg::DroneInfo::SharedPtr> swarm_info_;
 
-    rclcpp_action::GoalUUID preempted_goal_id_;
     std::mutex mutex_;
 
-    custom_interfaces::msg::GeoVel vll;
-    bool land_detected_;
+    std::atomic<bool> land_detected_{false};
     size_t i_p = 0;
     double target_alt;
     std::vector<geo::Distance> init_dists_;
+    custom_interfaces::msg::GeoPoint p_after_offset;
 
     // Containers
     void create_subscribers(rclcpp::QoS qos);
@@ -154,7 +152,7 @@ private:
         0.025f};
 
     // Öneri: Daha yumuşak ve az agresif tepkiler için
-    std::vector<PID> swarm_PIDs_ = std::vector<PID>(MAX_SWARM_SIZE, PID(0.6f, 0.1f, 0.2f, 0.1f, 1.0f));
+    std::vector<PID> swarm_PIDs_ = std::vector<PID>(MAX_SWARM_SIZE, PID(0.6f, 0.6f, 0.6f, 0.1f, 1.0f));
 
     void callbackSetParameters(const std::shared_ptr<custom_interfaces::srv::SetParameters::Request> request,
                                std::shared_ptr<custom_interfaces::srv::SetParameters::Response> response);
@@ -186,6 +184,10 @@ private:
     friend geo::Distance operator-(const custom_interfaces::msg::GeoPoint &points, const DroneCore &drone)
     {
         return geo::diff_points(points, drone.drone_info_->geo_point);
+    }
+    friend custom_interfaces::msg::GeoPoint operator+(DroneCore &drone, const geo::Distance &offset)
+    {
+        return geo::after_offset(drone.drone_info_->geo_point, offset);
     }
 };
 

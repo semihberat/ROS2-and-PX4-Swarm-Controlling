@@ -33,6 +33,10 @@ namespace geo
     double calculate_bearing(const custom_interfaces::msg::GeoPoint &from,
                              const custom_interfaces::msg::GeoPoint &to);
 
+    custom_interfaces::msg::GeoPoint centroid(const std::vector<custom_interfaces::msg::DroneInfo::SharedPtr> &drones);
+
+    custom_interfaces::msg::GeoPoint after_offset(const custom_interfaces::msg::GeoPoint &drone, geo::Distance offset);
+
     inline double deg_to_rad(double deg)
     {
         return deg * M_PI / 180.0;

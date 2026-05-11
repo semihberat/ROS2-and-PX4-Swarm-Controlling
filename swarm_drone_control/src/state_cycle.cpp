@@ -2,6 +2,7 @@
 
 void DroneCore::state_cycle()
 {
+    using namespace custom_interfaces::srv;
     if (!this->req_)
     {
         return;
@@ -9,17 +10,18 @@ void DroneCore::state_cycle()
 
     switch (this->req_->command)
     {
-    case custom_interfaces::srv::DroneCommands::Request::TAKEOFF:
+    case DroneCommands::Request::TAKEOFF:
         this->takeoff(this->service_parameters_.takeoff_alt);
         break;
-    case custom_interfaces::srv::DroneCommands::Request::LAND:
+    case DroneCommands::Request::LAND:
         this->land();
         break;
-    case custom_interfaces::srv::DroneCommands::Request::HOLD:
+    case DroneCommands::Request::HOLD:
         this->hold();
         break;
-    case custom_interfaces::srv::DroneCommands::Request::WAYPOINT:
+    case DroneCommands::Request::WAYPOINT:
         this->goto_waypoints(this->req_->geo_points);
+
         break;
 
     default:
