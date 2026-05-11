@@ -1,5 +1,7 @@
 # Swarm Drone Control Workspace
 
+https://github.com/user-attachments/assets/228e083f-285b-49f6-ae37-c6954ca52d34
+
 Bu proje, PX4 otopilotu ve ROS 2 kullanılarak çoklu İHA'ların (drone) sürü halinde (swarm) offboard kontrolünü, görev yürütülmesini (kalkış, iniş, bekleme, rota takibi) ve otonom davranışlarını (çarpışma önleme vb.) yönetmek için geliştirilmiş bir sistemdir.
 
 ## Mimari ve Temel Bileşenler
